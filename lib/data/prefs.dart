@@ -43,6 +43,22 @@ class Prefs extends ChangeNotifier {
   bool get bookRings => _values['book_rings'] != '0';
   double get textScale => double.tryParse(_values['text_scale'] ?? '') ?? 1.0;
 
+  bool get reminders => _values['reminders'] == '1';
+  Future<void> setReminders(bool v) => _db.setSetting('reminders', v ? '1' : '0');
+
+  // Bloqueio do app (só neste aparelho).
+  bool get lockEnabled => (_values['lock_hash'] ?? '').isNotEmpty;
+  String get lockHash => _values['lock_hash'] ?? '';
+  String get lockSalt => _values['lock_salt'] ?? '';
+  bool get lockBiometric => _values['lock_bio'] == '1';
+  Future<void> setLock(String hash, String salt) async {
+    await _db.setSetting('lock_salt', salt);
+    await _db.setSetting('lock_hash', hash);
+  }
+
+  Future<void> clearLock() => _db.setSetting('lock_hash', '');
+  Future<void> setLockBiometric(bool v) => _db.setSetting('lock_bio', v ? '1' : '0');
+
   Future<void> setUiFont(String v) => _db.setSetting('ui_font', v);
   Future<void> setLightTheme(String v) => _db.setSetting('light_theme', v);
   Future<void> setDarkTheme(String v) => _db.setSetting('dark_theme', v);

@@ -9,12 +9,12 @@ void main() {
   test('cifra e decifra; senha errada é recusada', () async {
     final salt = randomBytes(16);
     final key = await deriveKey('nossa casa', salt);
-    final sealed = await seal({'oi': 1}, key);
-    expect(await open(sealed, key), {'oi': 1});
+    final sealed = await seal({'segredo': 'texto-secreto-da-casa-123'}, key);
+    expect(await open(sealed, key), {'segredo': 'texto-secreto-da-casa-123'});
     final wrong = await deriveKey('outra', salt);
     expect(() => open(sealed, wrong), throwsA(isA<WrongKeyException>()));
     // Nenhum texto legível no arquivo.
-    expect(String.fromCharCodes(sealed).contains('oi'), isFalse);
+    expect(String.fromCharCodes(sealed).contains('texto-secreto-da-casa'), isFalse);
   });
 
   test('cofre: o primeiro cria, o segundo confere a senha', () async {

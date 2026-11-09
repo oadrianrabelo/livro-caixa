@@ -1,4 +1,7 @@
 // Diálogos da carteira: fatura do cartão, envelopes (Guardado) e A receber.
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/dates.dart';
@@ -6,6 +9,7 @@ import '../../core/money.dart';
 import '../../data/app_data.dart';
 import '../../data/database.dart';
 import '../../domain/cards.dart';
+import '../../domain/csv_import.dart';
 import '../../domain/envelopes.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
@@ -420,4 +424,111 @@ Future<void> showReceive(BuildContext context, Receivable r) async {
       ),
     ),
   );
+}
+
+// ---------------------------------------------------------------------------
+// Importar extrato do Nubank (CSV)
+// ---------------------------------------------------------------------------
+
+Future<void> showImportCsv(BuildContext context) async {
+  final file = await FilePicker.pickFile(type: FileType.custom, allowedExtensions: ['csv']);
+  if (file == null || !context.mounted) return;
+  final ImportResult result;
+  try {
+    result = parseNubankCsv(utf8.decode(await file.readAsBytes(), allowMalformed: true));
+  } on FormatException catch (e) {
+    if (context.mounted) lcToast(context, e.message, icon: LucideIcons.circleAlert);
+    return;
+  }
+  if (!context.mounted) return;
+  await showLcDialog(context, builder: (_) => _ImportPreview(result: result));
+}
+
+class _ImportPreview extends StatefulWidget {
+  const _ImportPreview({required this.result});
+  final ImportResult result;
+
+  @override
+  State<_ImportPreview> createState() => _ImportPreviewState();
+}
+
+class _ImportPreviewState extends State<_ImportPreview> {
+  String? _accountId;
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AppScope.of(context);
+    final p = Paper.of(context);
+    final r = widget.result;
+    final isCard = r.format == 'cartao';
+    final accounts = scope.data.accounts
+        .where(
+          (a) =>
+              !a.archived &&
+              (isCard ? a.type == AccountType.cartao : a.type != AccountType.cartao && a.type != AccountType.vale),
+        )
+        .toList();
+    final acc = accounts.where((a) => a.id == _accountId).firstOrNull ?? accounts.firstOrNull;
+    final out = r.lines.where((l) => !l.income).fold(0, (s, l) => s + l.amount);
+    final inn = r.lines.where((l) => l.income).fold(0, (s, l) => s + l.amount);
+    return LcDialogBody(
+      title: isCard ? 'Importar fatura do cartão' : 'Importar extrato da conta',
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            '${r.lines.length} lançamentos · gastos ${formatBRL(out)}'
+            '${inn > 0 ? ' · entradas ${formatBRL(inn)}' : ''}'
+            '${r.skipped > 0 ? '\n${r.skipped} linha(s) ignorada(s) (pagamentos/estornos)' : ''}',
+            style: TextStyle(fontSize: 13.5, color: p.ink, height: 1.45),
+          ),
+          const SizedBox(height: 14),
+          if (accounts.isEmpty)
+            Text(
+              isCard ? 'Crie o cartão na Carteira primeiro (com fechamento e vencimento).' : 'Crie uma conta primeiro.',
+              style: TextStyle(fontSize: 13, color: p.redInk),
+            )
+          else
+            LcSelect<String?>(
+              label: isCard ? 'Em qual cartão' : 'Em qual conta',
+              value: acc?.id,
+              options: [for (final a in accounts) LcOption(a.id, a.name)],
+              onChanged: (v) => setState(() => _accountId = v),
+            ),
+          const SizedBox(height: 10),
+          Text(
+            'Entram sem categoria (dá para ajustar depois). Importar o mesmo arquivo de novo não duplica nada.'
+            '${inn > 0 ? ' As entradas pedem para separar o dízimo.' : ''}',
+            style: TextStyle(fontSize: 12.5, color: p.pencil),
+          ),
+        ],
+      ),
+      actions: [
+        LcButton('Cancelar', kind: LcButtonKind.ghost, onPressed: () => Navigator.pop(context)),
+        LcButton(
+          'Importar',
+          icon: LucideIcons.download,
+          onPressed: acc == null
+              ? null
+              : () async {
+                  final added = await scope.db.importLines(
+                    lines: [
+                      for (final l in r.lines)
+                        (date: l.date, description: l.description, amount: l.amount, income: l.income, key: l.key),
+                    ],
+                    accountId: acc.id,
+                    card: isCard,
+                  );
+                  if (context.mounted) {
+                    Navigator.pop(context);
+                    lcToast(
+                      context,
+                      added == 0 ? 'Nada novo: já estava tudo importado.' : '$added lançamento(s) importado(s).',
+                    );
+                  }
+                },
+        ),
+      ],
+    );
+  }
 }

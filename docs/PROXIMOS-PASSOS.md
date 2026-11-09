@@ -14,6 +14,6 @@ Ordem combinada com o Adrian para a próxima sessão:
    Medir com `flutter run --profile` + DevTools antes de mudar.
 2. ✅ **"Já pago" desligado por padrão ao lançar** (hoje vem ligado). Arquivo: `lib/ui/widgets/entry_form.dart`
    (`_paid = widget.editing?.paid ?? true` → `?? false`).
-3. Depois, o que falta da lista sugerida: lembretes no celular, bloqueio com digital/PIN,
-   widget na tela inicial do Android, importar a fatura do Nubank (CSV).
+3. ✅ Lembretes no celular, bloqueio com PIN/digital, widget na tela inicial, importar CSV do Nubank.
+   (Parte nativa do Android validada só pelo build do CI; testar no aparelho.)
 4. Testar a sincronização no celular de verdade (primeiro login real com o Google).

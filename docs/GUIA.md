@@ -16,7 +16,7 @@ A data é **o dia em que o dinheiro sai ou entra** — e ela decide **em qual m�
 Não é o dia em que você digitou, nem o dia em que a conta foi "criada".
 
 ## "Já pago" e o ✓
-- Lançou algo que **ainda vai pagar**? Deixe **"Já pago" desligado**. Ele aparece com ○ no caderno.
+- Lançamento novo já vem com **"Já pago" desligado** (aparece com ○). Se já pagou, ligue antes de salvar. Ele aparece com ○ no caderno.
 - Quando pagar, toque no ○ → vira ✓ vermelho. "Ainda a pagar" (no fim da página) mostra o que falta.
 - Entradas: "Já recebido" funciona igual.
 
@@ -59,6 +59,16 @@ Não é o dia em que você digitou, nem o dia em que a conta foi "criada".
 ## Sincronizar os dois celulares
 Ajustes → Sincronização → Conectar ao Google Drive (mesma conta da casa) → 1º aparelho cria a
 **senha da casa**, o 2º digita a mesma. Depois sincroniza sozinho.
+
+## Importar extrato do Nubank
+No app do Nubank, exporte a fatura do cartão ou o extrato da conta em **CSV**. No Livro-Caixa:
+**Carteira → Importar extrato** (ou Ajustes → Backup). Escolha o cartão/conta e pronto.
+Importar o mesmo arquivo de novo não duplica nada. Os lançamentos entram sem categoria.
+
+## Privacidade e lembretes (Ajustes)
+- **Bloquear com PIN**: pede o PIN ao abrir e ao voltar depois de 1 minuto. No Android, dá para usar a digital.
+- **Lembretes no celular**: "vence amanhã" e "vence hoje" (9h), o vale que renova e o dízimo a separar.
+- **Widget**: segure na tela inicial do Android → Widgets → Livro-Caixa. Mostra o Disponível do mês.
 
 ## Atalhos (computador)
 `Ctrl K` buscar/ações · `N` gasto · `E` entrada · `← →` mês · `T` mês atual · `1`–`5` abas.
