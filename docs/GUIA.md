@@ -1,0 +1,64 @@
+# Guia do Livro-Caixa (bem mastigado)
+
+## A ideia
+O app é o caderno de vocês. Cada mês é uma página:
+
+    Entradas − Dízimo − Oferta = Disponível
+    Disponível − Gastos (Cartão, Casa, Pessoal, Outros) − Guardado = Sobrou
+
+## O campo "Data" de um lançamento
+A data é **o dia em que o dinheiro sai ou entra** — e ela decide **em qual mês** o lançamento aparece.
+- **Conta a pagar** (luz, aluguel, internet): coloque o **dia do vencimento**. Ex.: luz vence 25/11 → 25/11.
+- **Gasto já feito** (mercado, padaria): o dia em que pagou (normalmente hoje).
+- **Compra no cartão de crédito**: o **dia da compra**. O app calcula sozinho em que fatura cai.
+- **Entrada** (salário, alfajor, corrida): o dia em que o dinheiro caiu (ou vai cair).
+- **Conta fixa**: o dia que você escolher vira o "dia do mês" em que ela aparece todo mês.
+Não é o dia em que você digitou, nem o dia em que a conta foi "criada".
+
+## "Já pago" e o ✓
+- Lançou algo que **ainda vai pagar**? Deixe **"Já pago" desligado**. Ele aparece com ○ no caderno.
+- Quando pagar, toque no ○ → vira ✓ vermelho. "Ainda a pagar" (no fim da página) mostra o que falta.
+- Entradas: "Já recebido" funciona igual.
+
+## Montar o mês (o que vocês faziam no caderno)
+1. **Mês → Lançar** (ou tecla N no computador).
+2. Para cada conta: valor, descrição, **data do vencimento**, categoria, "Já pago" desligado.
+3. Se ela se repete todo mês, ligue **Conta fixa** (e "O valor muda" para luz/água). Nos próximos meses
+   ela aparece sozinha.
+4. Lance o **salário** como **Entrada** + **Conta fixa**. O app pergunta **"Separar dízimo e oferta agora?"**.
+5. No fim do mês, o caderno mostra **Disponível** e **Sobrou**.
+
+## Dízimo e oferta
+- Toda entrada pergunta se quer separar. **Separar** lança os dois; **Ajustar…** muda % ou valor;
+  **Agora não** deixa um post-it amarelo lembrando.
+- Dinheiro que só está voltando (empréstimo): desligue **"Gera dízimo e oferta"**.
+- Dízimo/oferta nascem "a entregar" (○). Marque ✓ quando entregar.
+- Os percentuais padrão ficam em **Ajustes → Dízimo e oferta**.
+
+## Cartão de crédito
+1. **Carteira → Nova conta** → tipo **Cartão de crédito** → dia que **fecha** e dia que **vence**.
+2. Lance cada compra com a **conta = o cartão** e a **data da compra**.
+3. A fatura aparece em **Cartão** no mês do vencimento. Toque nela para ver as compras; ✓ marca a fatura paga.
+4. Parcelado: em "Parcelas" coloque 2×, 3×… (o valor é o de **cada parcela**).
+(Se preferir como no caderno — só o total da fatura —, lance um gasto com a categoria "Fatura do cartão".)
+
+## Vale-alimentação
+- **Carteira → Nova conta → Vale-alimentação**, valor e dia 20.
+- Compras com ele (cesta, arroz): conta = o vale. Não saem do Disponível; o post-it mostra quanto resta.
+
+## Guardado e A receber (aba Carteira)
+- **Novo envelope** (Férias, Reserva). Se já tem dinheiro guardado, coloque em "Já tem guardado".
+- **+** guarda, **−** tira. No fim do mês, "guardar a sobra →" no caderno.
+- **A receber → Adicionar**: o adiantamento emprestado, com a data. Quando voltar: **Recebi** (entra sem dízimo).
+
+## Aba Ano
+- **Próximos meses**: quanto entra × quanto já está comprometido. Só fica certo com o **salário como conta fixa**.
+- Gráfico do ano, para onde foi o dinheiro, a oferta de cada mês e o **lucro do alfajor**
+  (vendas com a categoria Alfajor − custos com "Ingredientes do alfajor").
+
+## Sincronizar os dois celulares
+Ajustes → Sincronização → Conectar ao Google Drive (mesma conta da casa) → 1º aparelho cria a
+**senha da casa**, o 2º digita a mesma. Depois sincroniza sozinho.
+
+## Atalhos (computador)
+`Ctrl K` buscar/ações · `N` gasto · `E` entrada · `← →` mês · `T` mês atual · `1`–`5` abas.

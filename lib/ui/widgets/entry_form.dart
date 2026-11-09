@@ -59,7 +59,7 @@ class _EntryFormState extends State<EntryForm> {
   late String? _accountId = widget.editing?.accountId;
   late String? _toAccountId = widget.editing?.toAccountId;
   late String? _categoryId = widget.editing?.categoryId;
-  late bool _paid = widget.editing?.paid ?? true;
+  late bool _paid = widget.editing?.paid ?? false; // novo lançamento: ainda a pagar
   late bool _tithable = widget.editing?.titheStatus != TitheStatus.isento;
   String? _personId;
   bool _personReady = false;

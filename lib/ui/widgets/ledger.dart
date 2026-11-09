@@ -1,6 +1,7 @@
 // Peças da "folha de caderno": pauta, margem, linhas de item, títulos.
 // Tudo tem altura múltipla de [kLine], para o texto cair em cima da pauta.
 import 'dart:math' as math;
+import 'dart:ui' show PointMode;
 
 import 'package:flutter/material.dart';
 
@@ -29,11 +30,15 @@ class LedgerSheet extends StatelessWidget {
       ),
       child: CustomPaint(
         painter: _RulePainter(p),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(minHeight: minHeight),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(kMarginX + 10, kLine, padding, kLine),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+        // O conteúdo fica numa camada própria: passar o mouse ou marcar ✓ não
+        // redesenha a pauta e a textura (isso travava o computador).
+        child: RepaintBoundary(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: minHeight),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(kMarginX + 10, kLine, padding, kLine),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+            ),
           ),
         ),
       ),
@@ -87,18 +92,40 @@ class _RulePainter extends CustomPainter {
     }
   }
 
-  /// Textura leve de papel: pontinhos aleatórios (sempre os mesmos, semente fixa).
-  void _paintGrain(Canvas canvas, Size size) {
+  /// Textura leve de papel: pontinhos fixos (gerados uma vez só) desenhados
+  /// numa única chamada.
+  static final List<Offset> _grain = () {
     final rnd = math.Random(7);
-    final paint = Paint()..color = p.ink.withValues(alpha: p.dark ? 0.035 : 0.025);
-    final count = (size.width * size.height / 900).clamp(0, 6000).toInt();
-    for (var i = 0; i < count; i++) {
-      canvas.drawCircle(Offset(rnd.nextDouble() * size.width, rnd.nextDouble() * size.height), 0.7, paint);
+    return [for (var i = 0; i < 1800; i++) Offset(rnd.nextDouble(), rnd.nextDouble())];
+  }();
+
+  void _paintGrain(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = p.ink.withValues(alpha: p.dark ? 0.05 : 0.035)
+      ..strokeWidth = 1.4
+      ..strokeCap = StrokeCap.round;
+    // A textura se repete a cada 600 px, então não cresce com o tamanho da folha.
+    const tile = 600.0;
+    final pts = <Offset>[];
+    for (var ty = 0.0; ty < size.height; ty += tile) {
+      for (var tx = 0.0; tx < size.width; tx += tile) {
+        for (final o in _grain) {
+          final x = tx + o.dx * tile, y = ty + o.dy * tile;
+          if (x < size.width && y < size.height) pts.add(Offset(x, y));
+        }
+      }
     }
+    canvas.drawPoints(PointMode.points, pts, paint);
   }
 
   @override
-  bool shouldRepaint(_RulePainter old) => old.p != p;
+  bool shouldRepaint(_RulePainter old) =>
+      old.p.ruling != p.ruling ||
+      old.p.grain != p.grain ||
+      old.p.showMargin != p.showMargin ||
+      old.p.rule != p.rule ||
+      old.p.margin != p.margin ||
+      old.p.ink != p.ink;
 }
 
 /// Argolas de fichário entre as duas páginas do livro aberto.
@@ -109,10 +136,12 @@ class BinderRings extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Paper.of(context);
-    return SizedBox(
-      width: 22,
-      height: height,
-      child: CustomPaint(painter: _RingsPainter(p)),
+    return RepaintBoundary(
+      child: SizedBox(
+        width: 22,
+        height: height,
+        child: CustomPaint(painter: _RingsPainter(p)),
+      ),
     );
   }
 }
@@ -146,7 +175,7 @@ class _RingsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingsPainter old) => old.p != p;
+  bool shouldRepaint(_RingsPainter old) => old.p.dark != p.dark;
 }
 
 /// Título de seção sublinhado ("Cartão", "Casa"...). Ocupa 2 linhas.
@@ -222,79 +251,83 @@ class LedgerRow extends StatelessWidget {
             '$sign${formatBRL(value!)}',
             style: p.mono(15, color: c, weight: bold ? FontWeight.w700 : FontWeight.w500),
           );
-    return InkWell(
-      onTap: onTap,
-      child: SizedBox(
-        height: kLine,
-        child: Stack(
-          children: [
-            if (value != null) Positioned(left: 0, right: 0, bottom: 7, height: 3, child: _Dots(color: p.rule)),
-            Padding(
-              padding: const EdgeInsets.only(bottom: 3),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Flexible(
-                    child: ColoredBox(
-                      color: p.paper,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (checked != null)
-                              SizedBox(
-                                width: 30,
-                                child: InkResponse(
-                                  onTap: onCheck,
-                                  radius: 18,
-                                  child: Text(
-                                    checked! ? '✓' : '○',
-                                    style: p.hand(
-                                      checked! ? 26 : 18,
-                                      color: checked! ? p.redInk : p.pencil,
-                                      weight: FontWeight.w700,
+    return MouseRegion(
+      cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: SizedBox(
+          height: kLine,
+          child: Stack(
+            children: [
+              if (value != null) Positioned(left: 0, right: 0, bottom: 7, height: 3, child: _Dots(color: p.rule)),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 3),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Flexible(
+                      child: ColoredBox(
+                        color: p.paper,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 6),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (checked != null)
+                                SizedBox(
+                                  width: 30,
+                                  child: GestureDetector(
+                                    behavior: HitTestBehavior.opaque,
+                                    onTap: onCheck,
+                                    child: Text(
+                                      checked! ? '✓' : '○',
+                                      style: p.hand(
+                                        checked! ? 26 : 18,
+                                        color: checked! ? p.redInk : p.pencil,
+                                        weight: FontWeight.w700,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                            // Rótulo + anotação a lápis num texto só: se faltar espaço,
-                            // corta a anotação primeiro, e o rótulo fica inteiro.
-                            Flexible(
-                              child: Text.rich(
-                                TextSpan(
-                                  children: [
-                                    TextSpan(
-                                      text: label,
-                                      style: p.hand(23, color: c, weight: bold ? FontWeight.w700 : null),
-                                    ),
-                                    if (note != null && note!.isNotEmpty)
+                              // Rótulo + anotação a lápis num texto só: se faltar espaço,
+                              // corta a anotação primeiro, e o rótulo fica inteiro.
+                              Flexible(
+                                child: Text.rich(
+                                  TextSpan(
+                                    children: [
                                       TextSpan(
-                                        text: '  $note',
-                                        style: p.hand(17, color: p.pencil),
+                                        text: label,
+                                        style: p.hand(23, color: c, weight: bold ? FontWeight.w700 : null),
                                       ),
-                                  ],
+                                      if (note != null && note!.isNotEmpty)
+                                        TextSpan(
+                                          text: '  $note',
+                                          style: p.hand(17, color: p.pencil),
+                                        ),
+                                    ],
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  if (valueText != null)
-                    ColoredBox(
-                      color: p.paper,
-                      child: Padding(padding: const EdgeInsets.only(left: 6), child: valueText),
-                    ),
-                ],
+                    if (valueText != null)
+                      ColoredBox(
+                        color: p.paper,
+                        child: Padding(padding: const EdgeInsets.only(left: 6), child: valueText),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

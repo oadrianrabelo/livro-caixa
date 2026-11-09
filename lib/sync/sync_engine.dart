@@ -8,8 +8,6 @@
 // (a edição mais recente vence; exclusões também viajam) e subir o nosso.
 import 'dart:convert';
 
-import 'package:cryptography/cryptography.dart';
-
 import '../backup/backup.dart';
 import '../data/database.dart';
 import 'crypto.dart';
@@ -79,7 +77,7 @@ class SyncEngine {
     // Sobe o nosso retrato só se algo mudou desde a última vez.
     final snapshot = await exportData(db);
     final data = snapshot['data'];
-    final hash = base64.encode((await Sha256().hash(utf8.encode(jsonEncode(data)))).bytes);
+    final hash = await jsonHash(data!);
     if (hash != _lastPushedHash) {
       await store.write(mine, await seal(snapshot, key));
       _lastPushedHash = hash;
