@@ -7,6 +7,7 @@
 //   detecta qualquer alteração: arquivo mexido = erro, nunca dado errado.
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -21,15 +22,23 @@ List<int> randomBytes(int n) {
   return [for (var i = 0; i < n; i++) r.nextInt(256)];
 }
 
+// Tudo que é pesado (derivar a chave, cifrar, decifrar) roda em outro
+// isolate: assim a tela nunca trava enquanto sincroniza.
+
 /// Senha + sal -> chave (32 bytes). Leva ~1 s no celular: é feito uma vez por aparelho.
-Future<List<int>> deriveKey(String passphrase, List<int> salt) async {
+Future<List<int>> deriveKey(String passphrase, List<int> salt) =>
+    Isolate.run(() => _deriveKey(passphrase, List<int>.of(salt)));
+
+Future<List<int>> _deriveKey(String passphrase, List<int> salt) async {
   final kdf = Pbkdf2(macAlgorithm: Hmac.sha256(), iterations: _kdfIterations, bits: 256);
   final key = await kdf.deriveKeyFromPassword(password: passphrase, nonce: salt);
   return key.extractBytes();
 }
 
 /// JSON -> gzip -> AES-GCM. Formato: "LCX1" + nonce(12) + mac(16) + dados.
-Future<Uint8List> seal(Object json, List<int> key) async {
+Future<Uint8List> seal(Object json, List<int> key) => Isolate.run(() => _seal(json, List<int>.of(key)));
+
+Future<Uint8List> _seal(Object json, List<int> key) async {
   final plain = gzip.encode(utf8.encode(jsonEncode(json)));
   final box = await _aes.encrypt(plain, secretKey: SecretKey(key), nonce: randomBytes(12));
   return Uint8List.fromList([..._magic, ...box.nonce, ...box.mac.bytes, ...box.cipherText]);
@@ -43,7 +52,10 @@ class WrongKeyException implements Exception {
 
 /// O inverso de [seal]. Lança [WrongKeyException] se a chave não bater
 /// (ou se o arquivo foi alterado).
-Future<Object?> open(List<int> bytes, List<int> key) async {
+Future<Object?> open(List<int> bytes, List<int> key) =>
+    Isolate.run(() => _open(List<int>.of(bytes), List<int>.of(key)));
+
+Future<Object?> _open(List<int> bytes, List<int> key) async {
   if (bytes.length < 32 || !_startsWithMagic(bytes)) throw const FormatException('Arquivo de sincronização inválido.');
   final box = SecretBox(bytes.sublist(32), nonce: bytes.sublist(4, 16), mac: Mac(bytes.sublist(16, 32)));
   try {
@@ -55,3 +67,9 @@ Future<Object?> open(List<int> bytes, List<int> key) async {
 }
 
 bool _startsWithMagic(List<int> b) => [for (var i = 0; i < 4; i++) b[i] == _magic[i]].every((x) => x);
+
+/// Impressão digital (SHA-256) de um JSON, calculada fora da tela.
+Future<String> jsonHash(Object json) => Isolate.run(() async {
+  final h = await Sha256().hash(utf8.encode(jsonEncode(json)));
+  return base64.encode(h.bytes);
+});

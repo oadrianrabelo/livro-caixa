@@ -130,7 +130,20 @@ class _ShellState extends State<Shell> {
           children: [
             const UpdateBanner(),
             Expanded(
-              child: IndexedStack(index: _index, children: [for (final d in _destinations) d.page]),
+              // Só a aba aberta é montada (e recalculada a cada mudança). O Mês fica
+              // sempre montado para não perder a página em que você estava.
+              child: IndexedStack(
+                index: _index,
+                children: [
+                  for (var i = 0; i < _destinations.length; i++)
+                    if (i == 0)
+                      TickerMode(enabled: _index == 0, child: _destinations[0].page)
+                    else if (i == _index)
+                      _destinations[i].page
+                    else
+                      const SizedBox.shrink(),
+                ],
+              ),
             ),
           ],
         ),

@@ -2,7 +2,7 @@
 
 Ordem combinada com o Adrian para a próxima sessão:
 
-1. **Desempenho no desktop: o app "engasga" e trava.** Investigar e corrigir primeiro.
+1. ✅ **Desempenho no desktop** (feito: hover pela folha gasta ~16× menos CPU).
    Suspeitas a medir (não confirmadas):
    - `AppData` recarrega TODAS as listas e notifica a cada mudança; várias telas (`IndexedStack`
      mantém as 5 abas vivas) recalculam `monthSummary`/`forecast`/`valeStatus` a cada notificação.
@@ -12,7 +12,7 @@ Ordem combinada com o Adrian para a próxima sessão:
    - `BinderRings` com shader por frame; `AnimatedContainer` em muitas linhas.
    - Sincronização: `_onDataChanged` pode disparar sync repetido; exportar o banco inteiro a cada mudança.
    Medir com `flutter run --profile` + DevTools antes de mudar.
-2. **"Já pago" desligado por padrão ao lançar** (hoje vem ligado). Arquivo: `lib/ui/widgets/entry_form.dart`
+2. ✅ **"Já pago" desligado por padrão ao lançar** (hoje vem ligado). Arquivo: `lib/ui/widgets/entry_form.dart`
    (`_paid = widget.editing?.paid ?? true` → `?? false`).
 3. Depois, o que falta da lista sugerida: lembretes no celular, bloqueio com digital/PIN,
    widget na tela inicial do Android, importar a fatura do Nubank (CSV).
