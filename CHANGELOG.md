@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.7.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.6.1...v0.7.0) (2026-11-09)
+
+
+### ✨ Novas Funcionalidades
+
+* mais fontes (Excalifont e outras); rolagem mais leve; PIN nos Ajustes; post-it nítido ([#17](https://github.com/oadrianrabelo/livro-caixa/issues/17)) ([78dc644](https://github.com/oadrianrabelo/livro-caixa/commit/78dc6444c94378234e9aa727033ca5ff9b1e2dc2))
+
 ## [0.6.1](https://github.com/oadrianrabelo/livro-caixa/compare/v0.6.0...v0.6.1) (2026-11-09)
 
 
