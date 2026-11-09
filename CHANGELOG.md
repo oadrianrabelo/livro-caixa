@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.6.1](https://github.com/oadrianrabelo/livro-caixa/compare/v0.6.0...v0.6.1) (2026-11-09)
+
+
+### 🐛 Correções
+
+* **windows:** compilar o plugin da digital no MSVC novo [instaladores] ([#15](https://github.com/oadrianrabelo/livro-caixa/issues/15)) ([d958559](https://github.com/oadrianrabelo/livro-caixa/commit/d958559024b0830bdbdceefff349ca73d1ec592c))
+
 ## [0.6.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.5.0...v0.6.0) (2026-11-09)
 
 
