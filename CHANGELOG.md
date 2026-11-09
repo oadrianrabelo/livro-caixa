@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.6.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.5.0...v0.6.0) (2026-11-09)
+
+
+### ✨ Novas Funcionalidades
+
+* importar extrato do Nubank, lembretes, bloqueio com PIN/digital e widget ([#14](https://github.com/oadrianrabelo/livro-caixa/issues/14)) ([cfc52f4](https://github.com/oadrianrabelo/livro-caixa/commit/cfc52f47ec9dd19cd02154278c76c664c1e8816d))
+
+
+### ⚡ Desempenho
+
+* app fluido no computador e "Já pago" desligado por padrão ([#12](https://github.com/oadrianrabelo/livro-caixa/issues/12)) ([7d91360](https://github.com/oadrianrabelo/livro-caixa/commit/7d91360faa7d21903698df15ebb832e787ddf796))
+
 ## [0.5.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.4.0...v0.5.0) (2026-11-06)
 
 
