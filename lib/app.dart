@@ -198,9 +198,15 @@ class _Sidebar extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(8, 0, 8, 18),
-            child: Text(
-              '📒 $appName',
-              style: p.hand(28, color: p.redInk, weight: FontWeight.w700),
+            // Letras largas (Excalifont, Coming Soon) encolhem em vez de quebrar a linha.
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '📒 $appName',
+                maxLines: 1,
+                style: p.hand(28, color: p.redInk, weight: FontWeight.w700),
+              ),
             ),
           ),
           _SidebarSearch(onTap: onSearch),
