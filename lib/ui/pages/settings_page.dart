@@ -32,7 +32,17 @@ class SettingsPage extends StatelessWidget {
       listenable: Listenable.merge([scope.prefs, scope.data]),
       builder: (context, _) => const PageBody(
         title: 'Ajustes',
-        children: [SyncCard(), _Appearance(), _Tithe(), _Recurrings(), _Categories(), _People(), _Backup(), _About()],
+        children: [
+          SyncCard(),
+          _Privacy(),
+          _Appearance(),
+          _Tithe(),
+          _Recurrings(),
+          _Categories(),
+          _People(),
+          _Backup(),
+          _About(),
+        ],
       ),
     );
   }

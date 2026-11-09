@@ -1,9 +1,28 @@
 // Fontes embutidas no app (declaradas no pubspec.yaml, em assets/fonts/).
 // Para adicionar uma: coloque o .ttf, declare no pubspec e inclua aqui.
 
-const uiFonts = ['Inter', 'Geist', 'IBM Plex Sans', 'Atkinson Hyperlegible'];
+// Inter é a mais parecida com a SF Pro do Mac (que não pode ser distribuída).
+const uiFonts = [
+  'Inter',
+  'Geist',
+  'Figtree',
+  'Manrope',
+  'Plus Jakarta Sans',
+  'Onest',
+  'DM Sans',
+  'Nunito',
+  'IBM Plex Sans',
+  'Atkinson Hyperlegible',
+];
 const handFonts = [
   'Caveat',
+  'Excalifont', // a do Excalidraw
+  'Virgil', // a antiga do Excalidraw
+  'Shantell Sans',
+  'Shadows Into Light',
+  'Coming Soon',
+  'Nanum Pen Script',
+  'Gaegu',
   'Kalam',
   'Patrick Hand',
   'Gochi Hand',
@@ -33,6 +52,13 @@ double handScale(String family) => switch (family) {
   'Gochi Hand' => 1.02,
   'Architects Daughter' => 0.86,
   'Sue Ellen Francisco' => 1.1,
+  'Excalifont' => 0.94,
+  'Virgil' => 0.94,
+  'Shantell Sans' => 0.86,
+  'Shadows Into Light' => 0.9,
+  'Coming Soon' => 0.8,
+  'Nanum Pen Script' => 1.28,
+  'Gaegu' => 1.12,
   _ => 1.0,
 };
 

@@ -62,6 +62,24 @@ flutter:
         - asset: assets/fonts/atkinson/AtkinsonHyperlegible-Regular.ttf
         - asset: assets/fonts/atkinson/AtkinsonHyperlegible-Bold.ttf
           weight: 700
+    - family: Figtree
+      fonts:
+        - asset: assets/fonts/figtree/Figtree-Variable.ttf
+    - family: Manrope
+      fonts:
+        - asset: assets/fonts/manrope/Manrope-Variable.ttf
+    - family: Plus Jakarta Sans
+      fonts:
+        - asset: assets/fonts/plus_jakarta_sans/PlusJakartaSans-Variable.ttf
+    - family: Onest
+      fonts:
+        - asset: assets/fonts/onest/Onest-Variable.ttf
+    - family: DM Sans
+      fonts:
+        - asset: assets/fonts/dm_sans/DMSans-Variable.ttf
+    - family: Nunito
+      fonts:
+        - asset: assets/fonts/nunito/Nunito-Variable.ttf
     # Letra de mão
     - family: Caveat
       fonts:
@@ -86,6 +104,27 @@ flutter:
     - family: Sue Ellen Francisco
       fonts:
         - asset: assets/fonts/sue_ellen/SueEllenFrancisco-Regular.ttf
+    - family: Excalifont
+      fonts:
+        - asset: assets/fonts/excalifont/Excalifont-Regular.ttf
+    - family: Virgil
+      fonts:
+        - asset: assets/fonts/virgil/Virgil-Regular.ttf
+    - family: Shantell Sans
+      fonts:
+        - asset: assets/fonts/shantell_sans/ShantellSans-Regular.ttf
+    - family: Shadows Into Light
+      fonts:
+        - asset: assets/fonts/shadows_into_light/ShadowsIntoLight-Regular.ttf
+    - family: Coming Soon
+      fonts:
+        - asset: assets/fonts/coming_soon/ComingSoon-Regular.ttf
+    - family: Nanum Pen Script
+      fonts:
+        - asset: assets/fonts/nanum_pen/NanumPenScript-Regular.ttf
+    - family: Gaegu
+      fonts:
+        - asset: assets/fonts/gaegu/Gaegu-Regular.ttf
     # Números
     - family: JetBrains Mono
       fonts:
