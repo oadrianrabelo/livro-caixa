@@ -217,11 +217,23 @@ class AccountsPage extends StatelessWidget {
         return PageBody(
           title: 'Carteira',
           subtitle: 'Onde o dinheiro está, o que está guardado e o que vai voltar.',
-          trailing: LcButton(
-            'Nova conta',
-            icon: LucideIcons.plus,
-            kind: LcButtonKind.secondary,
-            onPressed: () => showAccountEditor(context),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LcButton(
+                'Importar extrato',
+                icon: LucideIcons.fileUp,
+                kind: LcButtonKind.ghost,
+                onPressed: () => showImportCsv(context),
+              ),
+              const SizedBox(width: 6),
+              LcButton(
+                'Nova conta',
+                icon: LucideIcons.plus,
+                kind: LcButtonKind.secondary,
+                onPressed: () => showAccountEditor(context),
+              ),
+            ],
           ),
           children: [
             Container(

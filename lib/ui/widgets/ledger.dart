@@ -22,22 +22,25 @@ class LedgerSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final p = Paper.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: p.paper,
-        borderRadius: BorderRadius.circular(4),
-        boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 6, offset: Offset(0, 2))],
-      ),
-      child: CustomPaint(
-        painter: _RulePainter(p),
-        // O conteúdo fica numa camada própria: passar o mouse ou marcar ✓ não
-        // redesenha a pauta e a textura (isso travava o computador).
-        child: RepaintBoundary(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: minHeight),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(kMarginX + 10, kLine, padding, kLine),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+    // Camada própria: rolar a página só desloca a folha já desenhada.
+    return RepaintBoundary(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: p.paper,
+          borderRadius: BorderRadius.circular(4),
+          boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 6, offset: Offset(0, 2))],
+        ),
+        child: CustomPaint(
+          painter: _RulePainter(p),
+          // O conteúdo fica numa camada própria: passar o mouse ou marcar ✓ não
+          // redesenha a pauta e a textura (isso travava o computador).
+          child: RepaintBoundary(
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: minHeight),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(kMarginX + 10, kLine, padding, kLine),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: children),
+              ),
             ),
           ),
         ),
@@ -73,13 +76,19 @@ class _RulePainter extends CustomPainter {
           canvas.drawLine(Offset(x, kLine * 2), Offset(x, size.height), grid);
         }
       case Ruling.pontilhada:
-        final dot = Paint()..color = p.rule;
+        // Todas as bolinhas numa chamada só (antes era uma chamada por bolinha).
         const step = kLine / 2;
-        for (var y = kLine * 2; y < size.height; y += step) {
-          for (var x = step; x < size.width; x += step) {
-            canvas.drawCircle(Offset(x, y), 1.1, dot);
-          }
-        }
+        canvas.drawPoints(
+          PointMode.points,
+          [
+            for (var y = kLine * 2; y < size.height; y += step)
+              for (var x = step; x < size.width; x += step) Offset(x, y),
+          ],
+          Paint()
+            ..color = p.rule
+            ..strokeWidth = 2.2
+            ..strokeCap = StrokeCap.round,
+        );
       case Ruling.lisa:
         break;
     }
@@ -125,7 +134,8 @@ class _RulePainter extends CustomPainter {
       old.p.showMargin != p.showMargin ||
       old.p.rule != p.rule ||
       old.p.margin != p.margin ||
-      old.p.ink != p.ink;
+      old.p.ink != p.ink ||
+      old.p.dark != p.dark;
 }
 
 /// Argolas de fichário entre as duas páginas do livro aberto.
@@ -381,25 +391,34 @@ class StickyNote extends StatelessWidget {
       height: kLine * 3,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Transform.rotate(
-          angle: -0.008,
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: p.sticky,
-              boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(1, 2))],
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(text, style: p.hand(21), maxLines: 2, overflow: TextOverflow.ellipsis),
+        // Só o papel fica torto; o texto continua reto (girar o texto deixava borrado).
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Transform.rotate(
+                angle: -0.008,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: p.sticky,
+                    boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 4, offset: Offset(1, 2))],
                   ),
-                  ?action,
-                ],
+                ),
               ),
             ),
-          ),
+            Positioned.fill(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(text, style: p.hand(21), maxLines: 2, overflow: TextOverflow.ellipsis),
+                    ),
+                    ?action,
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

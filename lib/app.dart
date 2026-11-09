@@ -174,7 +174,7 @@ class _ShellState extends State<Shell> {
 
     return CallbackShortcuts(
       bindings: _shortcuts,
-      child: Focus(autofocus: true, child: Scaffold(body: body)),
+      child: Focus(autofocus: true, child: Scaffold(resizeToAvoidBottomInset: false, body: body)),
     );
   }
 }

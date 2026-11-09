@@ -65,6 +65,8 @@ class _MonthPageState extends State<MonthPage> {
     final p = Paper.of(context);
     Widget arrow(IconData icon, String tip, VoidCallback onTap) => LcIconButton(icon, tooltip: tip, onPressed: onTap);
     return Scaffold(
+      // O teclado abre por cima, no formulário; a página de trás não precisa se refazer a cada quadro.
+      resizeToAvoidBottomInset: false,
       backgroundColor: p.paperShade,
       body: Column(
         children: [
