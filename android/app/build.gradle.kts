@@ -14,6 +14,8 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Exigido pelos lembretes (flutter_local_notifications).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -60,4 +62,7 @@ flutter {
 dependencies {
     // FileProvider: entrega o APK baixado ao instalador do Android.
     implementation("androidx.core:core:1.13.1")
+    // Tema AppCompat para a digital (local_auth) não travar em Androids antigos.
+    implementation("androidx.appcompat:appcompat:1.7.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

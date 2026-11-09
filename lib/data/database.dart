@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -734,6 +736,41 @@ class AppDatabase extends _$AppDatabase {
     await (update(receivables)..where((x) => x.id.equals(r.id))).write(
       ReceivablesCompanion(receivedEntryId: Value(id), updatedAt: Value(now())),
     );
+  });
+
+  // ---- Importação de extrato ----
+
+  /// Grava as linhas importadas. Cada linha tem id fixo (conta + chave do
+  /// extrato): importar o mesmo arquivo de novo não duplica nada.
+  /// Devolve quantas eram novas.
+  Future<int> importLines({
+    required List<({String date, String description, int amount, bool income, String key})> lines,
+    required String accountId,
+    required bool card,
+  }) => transaction(() async {
+    var added = 0;
+    final t = now();
+    for (final l in lines) {
+      final id = 'imp-$accountId-${base64Url.encode(utf8.encode(l.key))}';
+      final inserted = await into(entries).insert(
+        EntriesCompanion.insert(
+          id: id,
+          createdAt: t,
+          updatedAt: t,
+          type: l.income ? EntryType.receita : EntryType.despesa,
+          amount: l.amount,
+          date: l.date,
+          description: Value(l.description),
+          accountId: accountId,
+          // Do extrato da conta, já aconteceu; no cartão, fica para a fatura.
+          paid: Value(!card),
+          titheStatus: Value(l.income ? TitheStatus.pendente : null),
+        ),
+        mode: InsertMode.insertOrIgnore,
+      );
+      if (inserted > 0) added++;
+    }
+    return added;
   });
 
   // ---- Pessoas ----

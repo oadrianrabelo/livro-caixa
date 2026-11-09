@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'data/app_data.dart';
 import 'data/database.dart';
+import 'ui/lock.dart';
 import 'ui/nav.dart';
 import 'ui/pages/accounts_page.dart';
 import 'ui/pages/entries_page.dart';
@@ -47,7 +48,7 @@ class LivroCaixaApp extends StatelessWidget {
         locale: const Locale('pt', 'BR'),
         supportedLocales: const [Locale('pt', 'BR')],
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
-        home: const Shell(),
+        home: const LockGate(child: Shell()),
       ),
     );
   }

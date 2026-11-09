@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -12,12 +13,14 @@ import '../../data/database.dart';
 import '../../domain/tithe.dart';
 import '../../updates/updater.dart';
 import '../kit/kit.dart';
+import '../lock.dart';
 import '../theme/fonts.dart';
 import '../theme/paper.dart';
 import '../theme/themes.dart';
 import '../widgets/common.dart';
 import '../widgets/editors.dart';
 import '../widgets/sync_card.dart';
+import '../widgets/wallet_sheets.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -31,6 +34,82 @@ class SettingsPage extends StatelessWidget {
         title: 'Ajustes',
         children: [SyncCard(), _Appearance(), _Tithe(), _Recurrings(), _Categories(), _People(), _Backup(), _About()],
       ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Privacidade e avisos
+// ---------------------------------------------------------------------------
+
+class _Privacy extends StatefulWidget {
+  const _Privacy();
+
+  @override
+  State<_Privacy> createState() => _PrivacyState();
+}
+
+class _PrivacyState extends State<_Privacy> {
+  bool _bio = false;
+
+  @override
+  void initState() {
+    super.initState();
+    biometricAvailable().then((v) => mounted ? setState(() => _bio = v) : null);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final scope = AppScope.of(context);
+    final prefs = scope.prefs;
+    return LcGroup(
+      title: 'PRIVACIDADE E AVISOS',
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Column(
+            children: [
+              LcToggleRow(
+                title: 'Bloquear com PIN',
+                subtitle: 'Pede o PIN ao abrir e ao voltar depois de 1 minuto fora do app.',
+                value: prefs.lockEnabled,
+                onChanged: (v) async {
+                  if (v) {
+                    await showSetPin(context);
+                  } else {
+                    await prefs.clearLock();
+                  }
+                },
+              ),
+              if (prefs.lockEnabled && _bio)
+                LcToggleRow(
+                  title: 'Usar digital ou rosto',
+                  value: prefs.lockBiometric,
+                  onChanged: prefs.setLockBiometric,
+                ),
+              if (Platform.isAndroid)
+                LcToggleRow(
+                  title: 'Lembretes no celular',
+                  subtitle: 'Contas que vencem (véspera e no dia), o vale que renova e o dízimo a separar.',
+                  value: prefs.reminders,
+                  onChanged: (v) async {
+                    if (v && !await scope.extras.requestPermission()) {
+                      if (context.mounted) {
+                        lcToast(
+                          context,
+                          'Permita as notificações para receber os lembretes.',
+                          icon: LucideIcons.bellOff,
+                        );
+                      }
+                      return;
+                    }
+                    await prefs.setReminders(v);
+                  },
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
@@ -637,6 +716,12 @@ class _Backup extends StatelessWidget {
         leading: const Icon(LucideIcons.upload, size: 17),
         title: 'Importar backup…',
         onTap: () => _import(context),
+      ),
+      LcRow(
+        leading: const Icon(LucideIcons.fileSpreadsheet, size: 17),
+        title: 'Importar extrato do Nubank (CSV)…',
+        subtitle: 'Fatura do cartão ou extrato da conta',
+        onTap: () => showImportCsv(context),
       ),
     ],
   );
