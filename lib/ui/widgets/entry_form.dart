@@ -11,19 +11,36 @@ import 'tithe_dialog.dart';
 
 /// Abre o formulário de lançamento (novo ou edição) numa folha de baixo.
 /// Depois de salvar uma ENTRADA, pergunta se quer separar dízimo e oferta.
-Future<void> showEntryForm(BuildContext context, {Entry? editing, EntryType? type, String? date}) async {
+/// Abre o formulário. Devolve true se algo foi salvo.
+Future<bool> showEntryForm(
+  BuildContext context, {
+  Entry? editing,
+  EntryType? type,
+  String? date,
+  int? amount,
+  String? accountId,
+  String? description,
+}) async {
   final before = editing;
   final savedId = await showLcSheet<String>(
     context,
     builder: (_) => Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: EntryForm(editing: editing, initialType: type, initialDate: date),
+      child: EntryForm(
+        editing: editing,
+        initialType: type,
+        initialDate: date,
+        initialAmount: amount,
+        initialAccountId: accountId,
+        initialDescription: description,
+      ),
     ),
   );
-  if (savedId == null || !context.mounted) return;
+  if (savedId == null) return false;
+  if (!context.mounted) return true;
   final db = AppScope.of(context).db;
   final saved = await db.getEntry(savedId);
-  if (saved == null || saved.type != EntryType.receita || !context.mounted) return;
+  if (saved == null || saved.type != EntryType.receita || !context.mounted) return true;
 
   if (saved.titheStatus == TitheStatus.pendente && (before == null || before.titheStatus != TitheStatus.pendente)) {
     await showTitheDialog(context, incomes: [saved]);
@@ -39,13 +56,25 @@ Future<void> showEntryForm(BuildContext context, {Entry? editing, EntryType? typ
       );
     }
   }
+  return true;
 }
 
 class EntryForm extends StatefulWidget {
-  const EntryForm({super.key, this.editing, this.initialType, this.initialDate});
+  const EntryForm({
+    super.key,
+    this.editing,
+    this.initialType,
+    this.initialDate,
+    this.initialAmount,
+    this.initialAccountId,
+    this.initialDescription,
+  });
   final Entry? editing;
   final EntryType? initialType;
   final String? initialDate;
+  final int? initialAmount; // ex.: total da calculadora de compras
+  final String? initialAccountId;
+  final String? initialDescription;
 
   @override
   State<EntryForm> createState() => _EntryFormState();
@@ -53,13 +82,20 @@ class EntryForm extends StatefulWidget {
 
 class _EntryFormState extends State<EntryForm> {
   late EntryType _type = widget.editing?.type ?? widget.initialType ?? EntryType.despesa;
-  late final _amount = TextEditingController(text: widget.editing == null ? '' : centsToInput(widget.editing!.amount));
-  late final _description = TextEditingController(text: widget.editing?.description ?? '');
+  late final _amount = TextEditingController(
+    text: widget.editing != null
+        ? centsToInput(widget.editing!.amount)
+        : widget.initialAmount != null
+        ? centsToInput(widget.initialAmount!)
+        : '',
+  );
+  late final _description = TextEditingController(text: widget.editing?.description ?? widget.initialDescription ?? '');
   late String _date = widget.editing?.date ?? widget.initialDate ?? today();
-  late String? _accountId = widget.editing?.accountId;
+  late String? _accountId = widget.editing?.accountId ?? widget.initialAccountId;
   late String? _toAccountId = widget.editing?.toAccountId;
   late String? _categoryId = widget.editing?.categoryId;
-  late bool _paid = widget.editing?.paid ?? false; // novo lançamento: ainda a pagar
+  // Novo lançamento: ainda a pagar. Da calculadora de compras: pago na hora, no caixa.
+  late bool _paid = widget.editing?.paid ?? widget.initialAmount != null;
   late bool _tithable = widget.editing?.titheStatus != TitheStatus.isento;
   String? _personId;
   bool _personReady = false;
@@ -168,6 +204,7 @@ class _EntryFormState extends State<EntryForm> {
   }
 
   Future<void> _pickDate() async {
+    hideKeyboard();
     final picked = await showLcDatePicker(context, DateTime.parse(_date));
     if (picked != null) setState(() => _date = toIsoDate(picked));
   }
@@ -233,7 +270,7 @@ class _EntryFormState extends State<EntryForm> {
           LcField(
             label: _installments > 1 ? 'Valor de cada parcela' : 'Valor',
             controller: _amount,
-            autofocus: editing == null,
+            autofocus: editing == null && widget.initialAmount == null,
             money: true,
             prefix: r'R$ ',
             hint: '0,00',

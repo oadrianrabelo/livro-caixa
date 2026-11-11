@@ -11,6 +11,7 @@ import '../kit/kit.dart';
 import '../nav.dart';
 import '../theme/paper.dart';
 import '../widgets/entry_form.dart';
+import '../widgets/shopping_calc.dart';
 import '../widgets/wallet_sheets.dart';
 import '../widgets/ledger.dart';
 import '../widgets/tithe_dialog.dart';
@@ -137,6 +138,22 @@ List<Widget> _valeBlock(BuildContext context, MonthSummary s) {
           final st = valeStatus(v, data.entries, now);
           final days = st.daysUntilRenewal(now);
           return StickyNote(
+            action: GestureDetector(
+              onTap: () => showShoppingCalc(context),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: Padding(
+                  padding: const EdgeInsets.all(6),
+                  child: Text(
+                    'Calcular\ncompras',
+                    textAlign: TextAlign.end,
+                    style: p
+                        .hand(19, color: p.redInk, weight: FontWeight.w700)
+                        .copyWith(decoration: TextDecoration.underline, decorationColor: p.redInk, height: 1.1),
+                  ),
+                ),
+              ),
+            ),
             text:
                 '${v.name}: restam ${formatBRL(st.left)}\n'
                 'renova dia ${v.renewDay} (${days == 0

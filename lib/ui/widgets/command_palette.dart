@@ -12,6 +12,7 @@ import '../../domain/tithe.dart';
 import '../nav.dart';
 import '../theme/paper.dart';
 import 'entry_form.dart';
+import 'shopping_calc.dart';
 import 'kbd.dart';
 import 'tithe_dialog.dart';
 
@@ -72,6 +73,7 @@ class _PaletteState extends State<_Palette> {
           (c) => showTitheDialog(c, incomes: pending),
           subtitle: '${pending.length} entrada(s) pendente(s)',
         ),
+      _Command(LucideIcons.calculator, 'Calculadora de compras', (c) => showShoppingCalc(c)),
       _Command(LucideIcons.calendarCheck, 'Ir para o mês atual', (c) async {
         widget.goTab(0);
         monthNav.goToday();
