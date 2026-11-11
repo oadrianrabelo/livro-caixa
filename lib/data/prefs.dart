@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
@@ -26,6 +27,20 @@ class Prefs extends ChangeNotifier {
     final v = _values[k];
     return v != null && (allowed == null || allowed.contains(v)) ? v : d;
   }
+
+  /// Calculadora de compras: o que já foi anotado no mercado. Fica guardado
+  /// para não se perder se o app fechar no meio das compras.
+  List<ShopItem> get shopping {
+    try {
+      final list = jsonDecode(_values['shopping'] ?? '[]') as List;
+      return [for (final m in list.cast<Map<String, dynamic>>()) ShopItem.fromJson(m)];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> setShopping(List<ShopItem> items) =>
+      _db.setSetting('shopping', jsonEncode([for (final i in items) i.toJson()]));
 
   int get titheBp => _int('tithe_bp', defaultTitheBp);
   int get offeringBp => _int('offering_bp', defaultOfferingBp);
@@ -98,4 +113,17 @@ class Prefs extends ChangeNotifier {
     _sub.cancel();
     super.dispose();
   }
+}
+
+/// Um item da calculadora de compras.
+class ShopItem {
+  const ShopItem({required this.price, this.qty = 1, this.name = ''});
+  final int price; // centavos, por unidade
+  final int qty;
+  final String name;
+  int get total => price * qty;
+
+  factory ShopItem.fromJson(Map<String, dynamic> m) =>
+      ShopItem(price: m['p'] as int, qty: (m['q'] as int?) ?? 1, name: (m['n'] as String?) ?? '');
+  Map<String, dynamic> toJson() => {'p': price, if (qty != 1) 'q': qty, if (name.isNotEmpty) 'n': name};
 }

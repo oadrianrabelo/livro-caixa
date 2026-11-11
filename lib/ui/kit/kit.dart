@@ -282,6 +282,10 @@ class LcOption<T> {
   final String? subtitle;
 }
 
+/// Fecha o teclado do celular. Escolher uma opção (tipo, conta, categoria)
+/// não precisa dele, e ele tapava o formulário.
+void hideKeyboard() => FocusManager.instance.primaryFocus?.unfocus();
+
 class LcSelect<T> extends StatefulWidget {
   const LcSelect({
     super.key,
@@ -308,6 +312,7 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
   double _width = 200;
 
   void _toggle() {
+    hideKeyboard();
     if (_portal.isShowing) {
       _portal.hide();
     } else {
@@ -508,6 +513,7 @@ class LcSwitch extends StatelessWidget {
           ? null
           : () {
               HapticFeedback.selectionClick();
+              hideKeyboard();
               onChanged!(!value);
             },
       child: MouseRegion(
@@ -606,6 +612,7 @@ class LcSegmented<T> extends StatelessWidget {
           GestureDetector(
             onTap: () {
               HapticFeedback.selectionClick();
+              hideKeyboard();
               onChanged(v);
             },
             child: MouseRegion(
@@ -662,6 +669,7 @@ class LcChip extends StatelessWidget {
     return GestureDetector(
       onTap: () {
         HapticFeedback.selectionClick();
+        hideKeyboard();
         onTap();
       },
       child: MouseRegion(
