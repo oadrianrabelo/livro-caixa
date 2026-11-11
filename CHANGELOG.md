@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.8.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.7.0...v0.8.0) (2026-11-11)
+
+
+### ✨ Novas Funcionalidades
+
+* calculadora de compras e teclado some ao escolher uma opção ([#19](https://github.com/oadrianrabelo/livro-caixa/issues/19)) ([0bd79ef](https://github.com/oadrianrabelo/livro-caixa/commit/0bd79ef2fe4fb0995685574672fda2cc85e922ac))
+
 ## [0.7.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.6.1...v0.7.0) (2026-11-09)
 
 
