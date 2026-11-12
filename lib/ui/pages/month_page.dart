@@ -176,6 +176,19 @@ List<Widget> _valeBlock(BuildContext context, MonthSummary s) {
   ];
 }
 
+/// Conta ainda não paga: "atrasada", "vence hoje", "vence amanhã", "vence em 3 dias".
+String? _dueNote(Entry e) {
+  if (e.paid) return null;
+  final days = DateTime.parse(e.date).difference(DateTime.parse(today())).inDays;
+  if (days < 0) return 'atrasada';
+  if (days == 0) return 'vence hoje';
+  if (days == 1) return 'vence amanhã';
+  if (days <= 3) return 'vence em $days dias';
+  return null;
+}
+
+bool _overdue(Entry e) => !e.paid && e.date.compareTo(today()) <= 0;
+
 String _defaultDate(String month) => month == monthOf(today()) ? today() : '$month-01';
 
 class _MonthSheet extends StatelessWidget {
@@ -188,14 +201,13 @@ class _MonthSheet extends StatelessWidget {
     return ListenableBuilder(
       listenable: data,
       builder: (context, _) {
-        final s = monthSummary(
-          data.entries,
-          data.categories,
-          month,
-          valeAccounts: data.valeAccountIds,
-          cards: data.cards,
+        // Guardado até os dados mudarem: virar a página ou passar o mouse não refaz a conta.
+        final s = data.memo(
+          ('month', month),
+          () =>
+              monthSummary(data.entries, data.categories, month, valeAccounts: data.valeAccountIds, cards: data.cards),
         );
-        final pending = pendingTithe(data.entries, month: month);
+        final pending = data.memo(('pendingTithe', month), () => pendingTithe(data.entries, month: month));
         return LayoutBuilder(
           builder: (context, c) {
             final left = _incomeBlock(context, s, pending);
@@ -323,7 +335,10 @@ class _MonthSheet extends StatelessWidget {
             for (final inv in s.invoices)
               LedgerRow(
                 label: inv.card.name,
-                note: 'fatura · vence ${formatDate(inv.dueDate).substring(0, 5)}',
+                note: !inv.paid && inv.dueDate.compareTo(today()) < 0
+                    ? 'fatura atrasada (${formatDate(inv.dueDate).substring(0, 5)})'
+                    : 'fatura · vence ${formatDate(inv.dueDate).substring(0, 5)}',
+                noteColor: !inv.paid && inv.dueDate.compareTo(today()) <= 0 ? p.redInk : null,
                 value: inv.total,
                 checked: inv.paid,
                 onCheck: () => scope.db.setPaidAll(inv.purchases.map((e) => e.id), !inv.paid),
@@ -332,7 +347,8 @@ class _MonthSheet extends StatelessWidget {
           for (final e in list)
             LedgerRow(
               label: data.labelOf(e),
-              note: e.recurringId != null ? 'fixa' : null,
+              note: [if (e.recurringId != null) 'fixa', ?_dueNote(e)].join(' · '),
+              noteColor: _overdue(e) ? p.redInk : null,
               value: e.amount,
               checked: e.paid,
               onCheck: () => scope.db.setPaid(e.id, !e.paid),

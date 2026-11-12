@@ -236,6 +236,7 @@ class LedgerRow extends StatelessWidget {
     this.color,
     this.bold = false,
     this.note,
+    this.noteColor,
   });
 
   final String label;
@@ -247,6 +248,7 @@ class LedgerRow extends StatelessWidget {
   final Color? color;
   final bool bold;
   final String? note; // texto pequeno a lápis depois do rótulo
+  final Color? noteColor; // ex.: vermelho para conta atrasada
 
   @override
   Widget build(BuildContext context) {
@@ -315,7 +317,7 @@ class LedgerRow extends StatelessWidget {
                                       if (note != null && note!.isNotEmpty)
                                         TextSpan(
                                           text: '  $note',
-                                          style: p.hand(17, color: p.pencil),
+                                          style: p.hand(17, color: noteColor ?? p.pencil),
                                         ),
                                     ],
                                   ),

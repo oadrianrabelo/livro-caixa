@@ -942,16 +942,32 @@ Future<bool> lcConfirm(
 }
 
 /// Aviso rápido que aparece e some (no lugar do SnackBar).
-void lcToast(BuildContext context, String message, {IconData icon = LucideIcons.circleCheck}) {
+/// Aviso rápido no rodapé. Com [actionLabel]/[onAction] vira tocável
+/// (ex.: "Desfazer") e fica um pouco mais na tela.
+void lcToast(
+  BuildContext context,
+  String message, {
+  IconData icon = LucideIcons.circleCheck,
+  String? actionLabel,
+  VoidCallback? onAction,
+}) {
+  late OverlayEntry entry;
+  var removed = false;
+  void remove() {
+    if (removed) return;
+    removed = true;
+    entry.remove();
+  }
+
   final overlay = Overlay.of(context, rootOverlay: true);
   final p = Paper.of(context);
-  late OverlayEntry entry;
   entry = OverlayEntry(
     builder: (context) => Positioned(
       left: 16,
       right: 16,
       bottom: MediaQuery.paddingOf(context).bottom + 80,
       child: IgnorePointer(
+        ignoring: onAction == null,
         child: Center(
           child: TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: 1),
@@ -979,6 +995,22 @@ void lcToast(BuildContext context, String message, {IconData icon = LucideIcons.
                     Flexible(
                       child: Text(message, style: TextStyle(fontSize: 13.5, color: p.paper, height: 1.35)),
                     ),
+                    if (onAction != null) ...[
+                      const SizedBox(width: 14),
+                      GestureDetector(
+                        onTap: () {
+                          remove();
+                          onAction();
+                        },
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: Text(
+                            actionLabel ?? 'Desfazer',
+                            style: TextStyle(fontSize: 13.5, color: p.accent, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -989,7 +1021,7 @@ void lcToast(BuildContext context, String message, {IconData icon = LucideIcons.
     ),
   );
   overlay.insert(entry);
-  Future<void>.delayed(const Duration(milliseconds: 2800), entry.remove);
+  Future<void>.delayed(Duration(milliseconds: onAction == null ? 2800 : 5000), remove);
 }
 
 // ---------------------------------------------------------------------------

@@ -23,6 +23,7 @@ class AppData extends ChangeNotifier {
       db.watchPeople().listen((v) => _set(() => people = v)),
       db.watchEnvelopes().listen((v) => _set(() => envelopes = v)),
       db.watchReceivables().listen((v) => _set(() => receivables = v)),
+      db.watchShopItems().listen((v) => _set(() => shopItems = v)),
     ];
     db.ensureRecurringEntries(monthOf(today())); // contas fixas do mês atual
   }
@@ -37,6 +38,14 @@ class AppData extends ChangeNotifier {
   List<Person> people = [];
   List<Envelope> envelopes = [];
   List<Receivable> receivables = [];
+  List<ShopItem> shopItems = []; // histórico do mercado
+
+  /// Sobe a cada mudança; serve de chave para guardar cálculos pesados.
+  int version = 0;
+
+  /// Ids dos lançamentos que existem (para ignorar compras de lançamentos excluídos).
+  Set<String> get entryIds => _entryIds ??= {for (final e in entries) e.id};
+  Set<String>? _entryIds;
 
   /// Cartões de crédito (compras deles vão para a fatura).
   List<Account> get cards => [
@@ -69,9 +78,32 @@ class AppData extends ChangeNotifier {
       entries.where((e) => e.date.startsWith(month)).toList()
         ..sort((a, b) => b.date.compareTo(a.date) != 0 ? b.date.compareTo(a.date) : b.createdAt.compareTo(a.createdAt));
 
+  /// Várias tabelas mudam juntas (ao abrir, ao sincronizar): junta tudo num
+  /// único aviso, em vez de redesenhar as telas uma vez por tabela.
   void _set(VoidCallback fn) {
     fn();
-    notifyListeners();
+    version++;
+    _entryIds = null;
+    if (_pending) return;
+    _pending = true;
+    // Uma janela de um quadro (16 ms) pega as tabelas que chegam em sequência.
+    Timer(const Duration(milliseconds: 16), () {
+      _pending = false;
+      notifyListeners();
+    });
+  }
+
+  bool _pending = false;
+
+  final Map<Object, (int, Object?)> _memo = {};
+
+  /// Guarda o resultado de um cálculo até os dados mudarem.
+  T memo<T>(Object key, T Function() compute) {
+    final hit = _memo[key];
+    if (hit != null && hit.$1 == version) return hit.$2 as T;
+    final v = compute();
+    _memo[key] = (version, v);
+    return v;
   }
 
   @override

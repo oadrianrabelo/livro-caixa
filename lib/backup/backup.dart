@@ -32,6 +32,7 @@ Future<Map<String, dynamic>> exportData(AppDatabase db) async {
       'people': await dump(db.people),
       'envelopes': await dump(db.envelopes),
       'receivables': await dump(db.receivables),
+      'shopItems': await dump(db.shopItems),
     },
   };
 }
@@ -78,6 +79,7 @@ Future<MergeResult> importData(AppDatabase db, Object? json) async {
     await merge(db.people, 'people', Person.fromJson, (r) => r.id, (r) => r.updatedAt);
     await merge(db.envelopes, 'envelopes', Envelope.fromJson, (r) => r.id, (r) => r.updatedAt);
     await merge(db.receivables, 'receivables', Receivable.fromJson, (r) => r.id, (r) => r.updatedAt);
+    await merge(db.shopItems, 'shopItems', ShopItem.fromJson, (r) => r.id, (r) => r.updatedAt);
   });
   return result;
 }

@@ -136,6 +136,17 @@ class Receivables extends Table with SyncColumns {
   TextColumn get receivedEntryId => text().nullable()(); // a entrada criada quando voltou
 }
 
+/// Itens anotados na calculadora de compras: o histórico do mercado.
+/// Gravados quando a compra é lançada; servem para os relatórios e para
+/// sugerir preço e lista de compras.
+class ShopItems extends Table with SyncColumns {
+  TextColumn get name => text().withDefault(const Constant(''))(); // como foi digitado
+  IntColumn get price => integer()(); // centavos, por unidade
+  IntColumn get qty => integer().withDefault(const Constant(1))();
+  TextColumn get date => text()(); // AAAA-MM-DD
+  TextColumn get entryId => text().nullable()(); // o lançamento da compra
+}
+
 /// Pessoas da casa (para saber quem lançou / de quem é o gasto).
 @DataClassName('Person')
 class People extends Table with SyncColumns {
@@ -162,7 +173,9 @@ const _uuid = Uuid();
 String newId() => _uuid.v4();
 int now() => DateTime.now().millisecondsSinceEpoch;
 
-@DriftDatabase(tables: [Accounts, Categories, Entries, Budgets, Settings, Recurrings, People, Envelopes, Receivables])
+@DriftDatabase(
+  tables: [Accounts, Categories, Entries, Budgets, Settings, Recurrings, People, Envelopes, Receivables, ShopItems],
+)
 class AppDatabase extends _$AppDatabase {
   /// O arquivo `livro_caixa.sqlite` fica na pasta de dados do app
   /// (Windows: %APPDATA%, Linux: `~/.local/share/<id>`, Android: dados do app).
@@ -176,7 +189,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -228,6 +241,9 @@ class AppDatabase extends _$AppDatabase {
         await m.createTable(schema.receivables);
         await _seedCategories(); // cria Guardado e Ingredientes do alfajor
         await _seedProjects();
+      },
+      from4To5: (m, schema) async {
+        await m.createTable(schema.shopItems);
       },
     ),
   );
@@ -637,6 +653,33 @@ class AppDatabase extends _$AppDatabase {
     return firstId!;
   }
 
+  // ---- Compras (calculadora) ----
+
+  Stream<List<ShopItem>> watchShopItems() => (select(shopItems)..where((t) => t.deletedAt.isNull())).watch();
+
+  /// Guarda os itens de uma compra lançada.
+  Future<void> recordShopping({
+    required String entryId,
+    required String date,
+    required List<({String name, int price, int qty})> items,
+  }) => transaction(() async {
+    final t = now();
+    for (final i in items) {
+      await into(shopItems).insert(
+        ShopItemsCompanion.insert(
+          id: newId(),
+          createdAt: t,
+          updatedAt: t,
+          name: Value(i.name.trim()),
+          price: i.price,
+          qty: Value(i.qty),
+          date: date,
+          entryId: Value(entryId),
+        ),
+      );
+    }
+  });
+
   // ---- Guardado (envelopes) ----
 
   Stream<List<Envelope>> watchEnvelopes() =>
@@ -794,6 +837,13 @@ class AppDatabase extends _$AppDatabase {
       into(settings).insertOnConflictUpdate(Setting(key: key, value: value));
 
   /// Exclusão lógica: marca `deletedAt` (funciona em qualquer tabela com SyncColumns).
+  /// Desfaz uma exclusão (o "Desfazer" do aviso).
+  Future<void> restore(TableInfo<Table, dynamic> table, String id) => customUpdate(
+    'UPDATE ${table.actualTableName} SET deleted_at = NULL, updated_at = ? WHERE id = ?',
+    variables: [Variable.withInt(now()), Variable.withString(id)],
+    updates: {table},
+  );
+
   Future<void> softDelete(TableInfo<Table, dynamic> table, String id) {
     final t = now();
     return customUpdate(

@@ -48,7 +48,13 @@ Não é o dia em que você digitou, nem o dia em que a conta foi "criada".
 
 ## Calculadora de compras
 
-No mercado, toque em **Calcular compras**, no post-it do vale (ou procure "calculadora" na busca). Digite o preço e toque Enter: o campo já fica pronto para o próximo. Dá para pôr a quantidade (− 1 +) e o nome, se quiser. O total aparece grande e mostra quanto sobra no vale (ou quanto passa). A lista fica guardada no celular, então fechar o app no meio não perde nada. No fim, **Lançar no vale** abre o lançamento já preenchido e marcado como pago; ao salvar, a lista é limpa.
+No mercado, toque em **Calcular compras**, no post-it do vale (ou procure "calculadora" na busca). Digite o preço e toque Enter: o campo já fica pronto para o próximo. Dá para pôr a quantidade (− 1 +) e o nome. O total aparece grande e mostra quanto sobra no vale (ou quanto passa). A lista fica guardada no celular, então fechar o app no meio não perde nada. No fim, **Lançar no vale** abre o lançamento já preenchido e marcado como pago; ao salvar, os itens vão para o histórico e a calculadora é limpa.
+
+**Vale a pena pôr o nome dos itens.** Com o nome, o app aprende:
+- ao digitar "le", sugere **Leite · R$ 5,99** (último preço); um toque preenche nome e preço;
+- **Relatório** (na calculadora ou em Ano → Mercado): idas no mês, gasto por ida, os mais comprados (com preço médio), o que ficou mais caro e **Montar a lista**: os itens de costume, já marcando os que "estão na hora" (pelo intervalo entre as compras). **Copiar lista** manda para o WhatsApp; **Usar na calculadora** põe os itens em "Para pegar", que vão ganhando ✓ conforme vocês anotam.
+
+O histórico do mercado sincroniza entre os celulares, então o relatório é da casa toda.
 
 ## Guardado e A receber (aba Carteira)
 - **Novo envelope** (Férias, Reserva). Se já tem dinheiro guardado, coloque em "Já tem guardado".
@@ -59,6 +65,17 @@ No mercado, toque em **Calcular compras**, no post-it do vale (ou procure "calcu
 - **Próximos meses**: quanto entra × quanto já está comprometido. Só fica certo com o **salário como conta fixa**.
 - Gráfico do ano, para onde foi o dinheiro, a oferta de cada mês e o **lucro do alfajor**
   (vendas com a categoria Alfajor − custos com "Ingredientes do alfajor").
+- **Este mês vs. a média**: categorias acima (ou abaixo) da média dos 3 meses anteriores.
+- **Mercado**: resumo das compras e quantos itens já estão na hora de comprar.
+- **Quem gastou**: quanto cada um gastou no ano e no mês.
+
+## Pequenas ajudas
+
+- **Excluiu sem querer?** Aparece "Desfazer" por alguns segundos.
+- **Duplicar**: ao editar um lançamento, o ícone de copiar abre um igual, com a data de hoje.
+- **Descrição**: ao digitar, o app sugere lançamentos parecidos; um toque repete categoria, conta e valor.
+- **Vencimentos**: na página do mês, contas não pagas mostram "vence hoje", "vence amanhã", "vence em 3 dias" ou "atrasada" (em vermelho).
+- **Teclado**: escolher Gasto/Entrada, conta, categoria ou data fecha o teclado.
 
 ## Sincronizar os dois celulares
 Ajustes → Sincronização → Conectar ao Google Drive (mesma conta da casa) → 1º aparelho cria a

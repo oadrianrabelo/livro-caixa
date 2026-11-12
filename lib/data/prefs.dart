@@ -30,17 +30,28 @@ class Prefs extends ChangeNotifier {
 
   /// Calculadora de compras: o que já foi anotado no mercado. Fica guardado
   /// para não se perder se o app fechar no meio das compras.
-  List<ShopItem> get shopping {
+  List<CartItem> get shopping {
     try {
       final list = jsonDecode(_values['shopping'] ?? '[]') as List;
-      return [for (final m in list.cast<Map<String, dynamic>>()) ShopItem.fromJson(m)];
+      return [for (final m in list.cast<Map<String, dynamic>>()) CartItem.fromJson(m)];
     } catch (_) {
       return const [];
     }
   }
 
-  Future<void> setShopping(List<ShopItem> items) =>
+  Future<void> setShopping(List<CartItem> items) =>
       _db.setSetting('shopping', jsonEncode([for (final i in items) i.toJson()]));
+
+  /// Lista do que comprar (montada no relatório do mercado), só os nomes.
+  List<String> get shoppingPlan {
+    try {
+      return (jsonDecode(_values['shopping_plan'] ?? '[]') as List).cast<String>();
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  Future<void> setShoppingPlan(List<String> names) => _db.setSetting('shopping_plan', jsonEncode(names));
 
   int get titheBp => _int('tithe_bp', defaultTitheBp);
   int get offeringBp => _int('offering_bp', defaultOfferingBp);
@@ -116,14 +127,14 @@ class Prefs extends ChangeNotifier {
 }
 
 /// Um item da calculadora de compras.
-class ShopItem {
-  const ShopItem({required this.price, this.qty = 1, this.name = ''});
+class CartItem {
+  const CartItem({required this.price, this.qty = 1, this.name = ''});
   final int price; // centavos, por unidade
   final int qty;
   final String name;
   int get total => price * qty;
 
-  factory ShopItem.fromJson(Map<String, dynamic> m) =>
-      ShopItem(price: m['p'] as int, qty: (m['q'] as int?) ?? 1, name: (m['n'] as String?) ?? '');
+  factory CartItem.fromJson(Map<String, dynamic> m) =>
+      CartItem(price: m['p'] as int, qty: (m['q'] as int?) ?? 1, name: (m['n'] as String?) ?? '');
   Map<String, dynamic> toJson() => {'p': price, if (qty != 1) 'q': qty, if (name.isNotEmpty) 'n': name};
 }
