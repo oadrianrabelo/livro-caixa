@@ -11,8 +11,8 @@ import 'tithe_dialog.dart';
 
 /// Abre o formulário de lançamento (novo ou edição) numa folha de baixo.
 /// Depois de salvar uma ENTRADA, pergunta se quer separar dízimo e oferta.
-/// Abre o formulário. Devolve true se algo foi salvo.
-Future<bool> showEntryForm(
+/// Abre o formulário. Devolve o id do lançamento salvo (null se cancelou).
+Future<String?> showEntryForm(
   BuildContext context, {
   Entry? editing,
   EntryType? type,
@@ -20,6 +20,8 @@ Future<bool> showEntryForm(
   int? amount,
   String? accountId,
   String? description,
+  String? categoryId,
+  bool? paid,
 }) async {
   final before = editing;
   final savedId = await showLcSheet<String>(
@@ -33,14 +35,15 @@ Future<bool> showEntryForm(
         initialAmount: amount,
         initialAccountId: accountId,
         initialDescription: description,
+        initialCategoryId: categoryId,
+        initialPaid: paid,
       ),
     ),
   );
-  if (savedId == null) return false;
-  if (!context.mounted) return true;
+  if (savedId == null || !context.mounted) return savedId;
   final db = AppScope.of(context).db;
   final saved = await db.getEntry(savedId);
-  if (saved == null || saved.type != EntryType.receita || !context.mounted) return true;
+  if (saved == null || saved.type != EntryType.receita || !context.mounted) return savedId;
 
   if (saved.titheStatus == TitheStatus.pendente && (before == null || before.titheStatus != TitheStatus.pendente)) {
     await showTitheDialog(context, incomes: [saved]);
@@ -56,7 +59,7 @@ Future<bool> showEntryForm(
       );
     }
   }
-  return true;
+  return savedId;
 }
 
 class EntryForm extends StatefulWidget {
@@ -68,6 +71,8 @@ class EntryForm extends StatefulWidget {
     this.initialAmount,
     this.initialAccountId,
     this.initialDescription,
+    this.initialCategoryId,
+    this.initialPaid,
   });
   final Entry? editing;
   final EntryType? initialType;
@@ -75,6 +80,8 @@ class EntryForm extends StatefulWidget {
   final int? initialAmount; // ex.: total da calculadora de compras
   final String? initialAccountId;
   final String? initialDescription;
+  final String? initialCategoryId;
+  final bool? initialPaid;
 
   @override
   State<EntryForm> createState() => _EntryFormState();
@@ -93,9 +100,9 @@ class _EntryFormState extends State<EntryForm> {
   late String _date = widget.editing?.date ?? widget.initialDate ?? today();
   late String? _accountId = widget.editing?.accountId ?? widget.initialAccountId;
   late String? _toAccountId = widget.editing?.toAccountId;
-  late String? _categoryId = widget.editing?.categoryId;
-  // Novo lançamento: ainda a pagar. Da calculadora de compras: pago na hora, no caixa.
-  late bool _paid = widget.editing?.paid ?? widget.initialAmount != null;
+  late String? _categoryId = widget.editing?.categoryId ?? widget.initialCategoryId;
+  // Novo lançamento: ainda a pagar (a calculadora de compras passa "pago": foi no caixa).
+  late bool _paid = widget.editing?.paid ?? widget.initialPaid ?? false;
   late bool _tithable = widget.editing?.titheStatus != TitheStatus.isento;
   String? _personId;
   bool _personReady = false;
@@ -122,24 +129,90 @@ class _EntryFormState extends State<EntryForm> {
     return old == TitheStatus.separado ? null : TitheStatus.pendente; // null = mantém "separado"
   }
 
+  /// Lançamentos anteriores com descrição parecida (o mais recente de cada).
+  List<Widget> _descSuggestions(AppData data) {
+    final q = _description.text.trim().toLowerCase();
+    if (q.length < 2) return const [];
+    final index = data.memo(#descIndex, () {
+      final byDesc = <String, (Entry, int)>{};
+      for (final e in data.entries) {
+        if (e.description.isEmpty || e.recurringId != null || e.installmentCount != null) continue;
+        final k = '${e.type.name}|${e.description.trim().toLowerCase()}';
+        final cur = byDesc[k];
+        final newer = cur == null || e.date.compareTo(cur.$1.date) > 0;
+        byDesc[k] = (newer ? e : cur.$1, (cur?.$2 ?? 0) + 1);
+      }
+      return byDesc.values.toList()..sort((a, b) => b.$2.compareTo(a.$2));
+    });
+    final hits = [
+      for (final (e, _) in index)
+        if (e.type == _type && e.description.toLowerCase().contains(q) && e.description.toLowerCase() != q) e,
+    ].take(3).toList();
+    if (hits.isEmpty) return const [];
+    return [
+      const SizedBox(height: 8),
+      Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        children: [
+          for (final e in hits)
+            LcChip(
+              '${e.description} · ${formatBRL(e.amount)}',
+              selected: false,
+              onTap: () => setState(() {
+                _description.text = e.description;
+                _categoryId = e.categoryId;
+                _accountId = e.accountId;
+                if (parseBRL(_amount.text) == null) _amount.text = centsToInput(e.amount);
+              }),
+            ),
+        ],
+      ),
+    ];
+  }
+
+  /// Abre um lançamento novo igual a este, com a data de hoje.
+  void _duplicate() {
+    final e = widget.editing!;
+    final nav = Navigator.of(context);
+    nav.pop();
+    showEntryForm(
+      nav.context,
+      type: e.type,
+      amount: e.amount,
+      accountId: e.accountId,
+      description: e.description,
+      categoryId: e.categoryId,
+    );
+  }
+
   Future<void> _delete() async {
     final e = widget.editing!;
-    final warn = e.titheStatus == TitheStatus.separado
-        ? '\n\nEsta entrada já teve dízimo e oferta separados; eles continuam lançados.'
-        : '';
-    if (!await lcConfirm(
-      context,
-      'O lançamento sai do caderno e dos outros aparelhos.$warn',
-      confirm: 'Excluir',
-      danger: true,
-      title: 'Excluir "${e.description.isEmpty ? 'este lançamento' : e.description}"?',
-    )) {
+    // Só pergunta quando há algo a avisar; no resto, exclui e oferece "Desfazer".
+    if (e.titheStatus == TitheStatus.separado &&
+        !await lcConfirm(
+          context,
+          'Esta entrada já teve dízimo e oferta separados; eles continuam lançados.',
+          confirm: 'Excluir',
+          danger: true,
+          title: 'Excluir "${e.description.isEmpty ? 'este lançamento' : e.description}"?',
+        )) {
       return;
     }
     if (!mounted) return;
     final db = AppScope.of(context).db;
+    final nav = Navigator.of(context);
     await db.softDelete(db.entries, e.id);
-    if (mounted) Navigator.pop(context);
+    nav.pop();
+    if (nav.mounted) {
+      lcToast(
+        nav.context,
+        '"${AppScope.of(nav.context).data.labelOf(e)}" excluído.',
+        icon: LucideIcons.trash2,
+        actionLabel: 'Desfazer',
+        onAction: () => db.restore(db.entries, e.id),
+      );
+    }
   }
 
   Future<void> _save() async {
@@ -278,7 +351,14 @@ class _EntryFormState extends State<EntryForm> {
             onChanged: (_) => _installments > 1 ? setState(() {}) : null,
           ),
           gap,
-          LcField(label: 'Descrição', controller: _description, hint: transfer ? 'Transferência' : 'Ex.: Feira do mês'),
+          LcField(
+            label: 'Descrição',
+            controller: _description,
+            hint: transfer ? 'Transferência' : 'Ex.: Feira do mês',
+            onChanged: (_) => setState(() {}),
+          ),
+          // Já lançou algo parecido? Toque para repetir categoria, conta e valor.
+          if (_isNew && !transfer) ..._descSuggestions(data),
           gap,
           Row(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -469,8 +549,15 @@ class _EntryFormState extends State<EntryForm> {
           const SizedBox(height: 18),
           Row(
             children: [
-              if (editing != null)
-                LcButton('Excluir', kind: LcButtonKind.danger, icon: LucideIcons.trash2, onPressed: _delete),
+              if (editing != null) ...[
+                LcIconButton(LucideIcons.trash2, tooltip: 'Excluir', color: p.redInk, onPressed: _delete),
+                if (editing.recurringId == null && editing.installmentCount == null)
+                  LcIconButton(
+                    LucideIcons.copy,
+                    tooltip: 'Duplicar (lançar de novo, com a data de hoje)',
+                    onPressed: _duplicate,
+                  ),
+              ],
               const Spacer(),
               LcButton('Cancelar', kind: LcButtonKind.ghost, onPressed: () => Navigator.pop(context)),
               const SizedBox(width: 8),

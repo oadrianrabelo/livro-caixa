@@ -2,14 +2,17 @@
 // no fim tem o total exato para passar no vale (ou lançar como gasto).
 import 'package:flutter/material.dart';
 
+import '../../core/dates.dart';
 import '../../core/money.dart';
 import '../../data/app_data.dart';
 import '../../data/database.dart';
 import '../../data/prefs.dart';
+import '../../domain/shopping.dart';
 import '../../domain/vale.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
 import 'entry_form.dart';
+import 'shopping_report.dart';
 
 Future<void> showShoppingCalc(BuildContext context) async {
   final result = await showLcSheet<int>(
@@ -23,8 +26,22 @@ Future<void> showShoppingCalc(BuildContext context) async {
   // Lançar o total: no vale, se houver um.
   final scope = AppScope.of(context);
   final vale = scope.data.accounts.where((a) => a.type == AccountType.vale && !a.archived).firstOrNull;
-  final saved = await showEntryForm(context, amount: result, accountId: vale?.id, description: 'Compras');
-  if (saved) await scope.prefs.setShopping(const []);
+  final cart = scope.prefs.shopping;
+  final savedId = await showEntryForm(context, amount: result, accountId: vale?.id, description: 'Compras', paid: true);
+  if (savedId == null) return;
+  // Guarda os itens no histórico (relatórios e sugestões) e limpa a calculadora.
+  final entry = await scope.db.getEntry(savedId);
+  await scope.db.recordShopping(
+    entryId: savedId,
+    date: entry?.date ?? today(),
+    items: [for (final i in cart) (name: i.name, price: i.price, qty: i.qty)],
+  );
+  final bought = {for (final i in cart) normalizeItem(i.name)};
+  await scope.prefs.setShoppingPlan([
+    for (final n in scope.prefs.shoppingPlan)
+      if (!bought.contains(normalizeItem(n))) n,
+  ]);
+  await scope.prefs.setShopping(const []);
 }
 
 class _ShoppingCalc extends StatefulWidget {
@@ -55,7 +72,7 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
       setState(() => _error = 'Digite o preço.');
       return;
     }
-    final item = ShopItem(price: cents, qty: _qty, name: _name.text.trim());
+    final item = CartItem(price: cents, qty: _qty, name: _name.text.trim());
     await prefs.setShopping([item, ...prefs.shopping]);
     _price.clear();
     _name.clear();
@@ -64,6 +81,15 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
       _error = null;
     });
     _priceFocus.requestFocus(); // pronto para o próximo preço
+  }
+
+  /// Preenche com um item do histórico (nome e último preço).
+  void _fill(ProductStats s) {
+    _name.text = s.name;
+    if (parseBRL(_price.text) == null) _price.text = centsToInput(s.lastPrice);
+    setState(() => _error = null);
+    _priceFocus.requestFocus();
+    _price.selection = TextSelection(baseOffset: 0, extentOffset: _price.text.length);
   }
 
   Future<void> _remove(Prefs prefs, int index) async {
@@ -91,6 +117,21 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
         final count = items.fold(0, (sum, i) => sum + i.qty);
         final vale = scope.data.accounts.where((a) => a.type == AccountType.vale && !a.archived).firstOrNull;
         final left = vale == null ? null : valeStatus(vale, scope.data.entries, DateTime.now()).left;
+        final data = scope.data;
+        final stats = data.memo(#productStats, () => productStats(data.shopItems, data.entryIds));
+        final byKey = {for (final s in stats) s.key: s};
+        final inCart = {for (final i in items) normalizeItem(i.name)};
+        final plan = scope.prefs.shoppingPlan;
+        final query = normalizeItem(_name.text);
+        final suggestions = query.length < 2
+            ? const <ProductStats>[]
+            : stats.where((s) => s.key.contains(query) && s.key != query).take(4).toList();
+        Widget chip(String label, VoidCallback onTap, {bool done = false}) => LcChip(
+          label,
+          selected: false,
+          onTap: onTap,
+          leading: done ? Icon(LucideIcons.check, size: 13, color: p.greenInk) : null,
+        );
 
         return SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
@@ -98,9 +139,22 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                'Calculadora de compras',
-                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: p.ink, letterSpacing: -0.3),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Calculadora de compras',
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: p.ink, letterSpacing: -0.3),
+                    ),
+                  ),
+                  LcButton(
+                    'Relatório',
+                    icon: LucideIcons.chartPie,
+                    small: true,
+                    kind: LcButtonKind.ghost,
+                    onPressed: () => showShoppingReport(context),
+                  ),
+                ],
               ),
               const SizedBox(height: 12),
               // Total grande, como no visor.
@@ -133,6 +187,25 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                   ],
                 ),
               ),
+              if (plan.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                const LcLabel('Para pegar'),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final n in plan)
+                      chip(
+                        byKey[normalizeItem(n)] == null ? n : '$n · ${formatBRL(byKey[normalizeItem(n)]!.lastPrice)}',
+                        () {
+                          final s = byKey[normalizeItem(n)];
+                          s != null ? _fill(s) : setState(() => _name.text = n);
+                        },
+                        done: inCart.contains(normalizeItem(n)),
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 14),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -187,8 +260,20 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                 label: 'O que é (opcional)',
                 controller: _name,
                 hint: 'Ex.: arroz',
+                onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => _add(scope.prefs),
               ),
+              // Já comprou antes? Toque para usar o nome e o último preço.
+              if (suggestions.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    for (final st in suggestions) chip('${st.name} · ${formatBRL(st.lastPrice)}', () => _fill(st)),
+                  ],
+                ),
+              ],
               if (_error != null) ...[
                 const SizedBox(height: 8),
                 Text(_error!, style: TextStyle(fontSize: 12.5, color: p.redInk)),

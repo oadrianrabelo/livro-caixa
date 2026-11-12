@@ -8,10 +8,13 @@ import '../../data/app_data.dart';
 import '../../data/database.dart';
 import '../../domain/finance.dart';
 import '../../domain/projection.dart';
+import '../../domain/reports.dart';
+import '../../domain/shopping.dart';
 import '../../domain/tithe.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
 import '../widgets/common.dart';
+import '../widgets/shopping_report.dart';
 
 const _monthShort = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
 
@@ -35,25 +38,32 @@ class _YearPageState extends State<YearPage> {
       builder: (context, _) {
         final data = scope.data;
         String m(int i) => '$_year-${(i + 1).toString().padLeft(2, '0')}';
-        final months = [
-          for (var i = 0; i < 12; i++)
-            monthSummary(data.entries, data.categories, m(i), valeAccounts: data.valeAccountIds, cards: data.cards),
-        ];
+        // Cálculos pesados ficam guardados até os dados mudarem.
+        final months = data.memo(
+          ('year', _year),
+          () => [
+            for (var i = 0; i < 12; i++)
+              monthSummary(data.entries, data.categories, m(i), valeAccounts: data.valeAccountIds, cards: data.cards),
+          ],
+        );
         final income = months.fold(0, (s, x) => s + x.income);
         final primicias = months.fold(0, (s, x) => s + x.tithe + x.offering);
         final expense = months.fold(0, (s, x) => s + x.expense);
         final saved = months.fold(0, (s, x) => s + x.savedTotal);
         final thisMonth = monthOf(today());
-        final future = forecast(
-          fromMonth: thisMonth,
-          months: 6,
-          entries: data.entries,
-          recurrings: data.recurrings,
-          categories: data.categories,
-          valeAccounts: data.valeAccountIds,
-          cards: data.cards,
-          titheBp: scope.prefs.titheBp,
-          offeringBp: scope.prefs.offeringBp,
+        final future = data.memo(
+          ('forecast', thisMonth, scope.prefs.titheBp, scope.prefs.offeringBp),
+          () => forecast(
+            fromMonth: thisMonth,
+            months: 6,
+            entries: data.entries,
+            recurrings: data.recurrings,
+            categories: data.categories,
+            valeAccounts: data.valeAccountIds,
+            cards: data.cards,
+            titheBp: scope.prefs.titheBp,
+            offeringBp: scope.prefs.offeringBp,
+          ),
         );
 
         return PageBody(
@@ -115,7 +125,9 @@ class _YearPageState extends State<YearPage> {
                 ),
               ],
             ),
+            if (_year == DateTime.now().year) ...[const _VsAverage(), const _Market()],
             _Categories(year: _year),
+            _People(year: _year),
             _OfferingTrend(months: months, year: _year),
             _Projects(year: _year),
           ],
@@ -441,6 +453,132 @@ class _Projects extends StatelessWidget {
               ],
             ),
           ),
+      ],
+    );
+  }
+}
+
+/// Este mês comparado à média dos 3 anteriores, por categoria.
+class _VsAverage extends StatelessWidget {
+  const _VsAverage();
+
+  @override
+  Widget build(BuildContext context) {
+    final data = AppScope.of(context).data;
+    final p = Paper.of(context);
+    final month = monthOf(today());
+    final list = data.memo(('vsAvg', month), () => compareWithAverage(data.entries, month));
+    final above = [
+      for (final c in list)
+        if (c.average > 0 && c.diff > 0) c,
+    ];
+    final below = [
+      for (final c in list.reversed)
+        if (c.average > 0 && c.diff < 0) c,
+    ];
+    if (above.isEmpty && below.isEmpty) return const SizedBox.shrink();
+    Widget row(CategoryCompare c) {
+      final up = c.diff > 0;
+      final cat = data.category(c.categoryId);
+      return LcRow(
+        leading: SizedBox(width: 22, child: Text(cat?.icon ?? '•')),
+        title: cat?.name ?? 'Sem categoria',
+        subtitle: 'média ${formatBRL(c.average)} · este mês ${formatBRL(c.current)}',
+        trailing: Text(
+          '${up ? '+' : '−'}${formatBRL(c.diff.abs())}',
+          style: p.mono(13, weight: FontWeight.w600, color: up ? p.redInk : p.greenInk),
+        ),
+      );
+    }
+
+    return LcGroup(
+      title: 'ESTE MÊS VS. A MÉDIA',
+      description: 'Comparado à média dos 3 meses anteriores. O mês ainda não acabou: vale como alerta.',
+      children: [for (final c in above.take(4)) row(c), for (final c in below.take(2)) row(c)],
+    );
+  }
+}
+
+/// Quanto cada pessoa gastou no ano (e no mês atual).
+class _People extends StatelessWidget {
+  const _People({required this.year});
+  final int year;
+
+  @override
+  Widget build(BuildContext context) {
+    final data = AppScope.of(context).data;
+    final p = Paper.of(context);
+    if (data.people.isEmpty) return const SizedBox.shrink();
+    final month = monthOf(today());
+    final inYear = data.memo(('people', year), () => spentByPerson(data.entries, '$year'));
+    final inMonth = data.memo(('people', month), () => spentByPerson(data.entries, month));
+    if (inYear.isEmpty) return const SizedBox.shrink();
+    final total = inYear.values.fold(0, (a, b) => a + b);
+    final keys = inYear.keys.toList()..sort((a, b) => inYear[b]!.compareTo(inYear[a]!));
+    return LcGroup(
+      title: 'QUEM GASTOU',
+      description: 'Gastos lançados no nome de cada um (sem dízimo, oferta e guardado).',
+      children: [
+        for (final k in keys)
+          LcRow(
+            title: data.person(k)?.name ?? 'Sem pessoa',
+            subtitle: [
+              '${(inYear[k]! * 100 / total).round()}% do ano',
+              if (year == DateTime.now().year) 'neste mês ${formatBRL(inMonth[k] ?? 0)}',
+            ].join(' · '),
+            trailing: Text(formatBRL(inYear[k]!), style: p.mono(13, weight: FontWeight.w600)),
+          ),
+      ],
+    );
+  }
+}
+
+/// Resumo do mercado (calculadora de compras), com link para o relatório.
+class _Market extends StatelessWidget {
+  const _Market();
+
+  @override
+  Widget build(BuildContext context) {
+    final data = AppScope.of(context).data;
+    final p = Paper.of(context);
+    final stats = data.memo(#productStats, () => productStats(data.shopItems, data.entryIds));
+    final month = monthOf(today());
+    final trips = monthTrips(data.shopItems, data.entryIds, month);
+    final due = suggestedList(stats, DateTime.now()).where((s) => s.dueOn(DateTime.now())).length;
+    return LcGroup(
+      title: 'MERCADO',
+      trailing: LcButton(
+        'Relatório',
+        icon: LucideIcons.chartPie,
+        small: true,
+        kind: LcButtonKind.ghost,
+        onPressed: () => showShoppingReport(context),
+      ),
+      children: [
+        if (stats.isEmpty)
+          const LcRow(
+            title: 'Sem compras anotadas',
+            subtitle: 'Use a calculadora de compras (post-it do vale) e lance a compra no fim.',
+          )
+        else ...[
+          LcRow(
+            title: '${trips.trips} ${trips.trips == 1 ? 'ida' : 'idas'} neste mês',
+            subtitle: trips.trips == 0 ? null : 'média de ${formatBRL((trips.total / trips.trips).round())} por ida',
+            trailing: Text(formatBRL(trips.total), style: p.mono(13, weight: FontWeight.w600)),
+          ),
+          if (stats.isNotEmpty)
+            LcRow(
+              title: 'Mais comprado: ${stats.first.name}',
+              subtitle: '${stats.first.trips} vezes · último preço ${formatBRL(stats.first.lastPrice)}',
+            ),
+          if (due > 0)
+            LcRow(
+              title: '$due ${due == 1 ? 'item já está' : 'itens já estão'} na hora de comprar',
+              subtitle: 'Toque para montar a lista',
+              leading: Icon(LucideIcons.listChecks, size: 18, color: p.accent),
+              onTap: () => showShoppingReport(context),
+            ),
+        ],
       ],
     );
   }

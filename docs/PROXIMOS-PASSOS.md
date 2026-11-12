@@ -17,3 +17,8 @@ Ordem combinada com o Adrian para a próxima sessão:
 3. ✅ Lembretes no celular, bloqueio com PIN/digital, widget na tela inicial, importar CSV do Nubank.
    (Parte nativa do Android validada só pelo build do CI; testar no aparelho.)
 4. Testar a sincronização no celular de verdade (primeiro login real com o Google).
+5. ✅ (12/11) Notificação única por mudança no `AppData` + cache de cálculos (`AppData.memo`):
+   mês, ano, previsão, relatórios. Histórico do mercado (tabela `shop_items`, banco v5).
+6. Ideias para depois: orçamento por categoria (a tabela `budgets` já existe, sem tela);
+   editar um item já anotado na calculadora; lista de compras compartilhada entre os dois celulares
+   (hoje "Para pegar" é de cada aparelho).

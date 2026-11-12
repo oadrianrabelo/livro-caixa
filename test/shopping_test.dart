@@ -3,10 +3,10 @@ import 'package:livro_caixa/data/prefs.dart';
 
 void main() {
   test('item da calculadora vai e volta do JSON', () {
-    const item = ShopItem(price: 599, qty: 3, name: 'arroz');
-    final back = ShopItem.fromJson(item.toJson());
+    const item = CartItem(price: 599, qty: 3, name: 'arroz');
+    final back = CartItem.fromJson(item.toJson());
     expect(back.total, 1797);
     expect(back.name, 'arroz');
-    expect(ShopItem.fromJson(const ShopItem(price: 250).toJson()).qty, 1);
+    expect(CartItem.fromJson(const CartItem(price: 250).toJson()).qty, 1);
   });
 }
