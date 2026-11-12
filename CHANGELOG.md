@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.9.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.8.0...v0.9.0) (2026-11-12)
+
+
+### ✨ Novas Funcionalidades
+
+* histórico do mercado com relatório e lista; relatórios no Ano; desfazer, duplicar e sugestões ([#21](https://github.com/oadrianrabelo/livro-caixa/issues/21)) ([ce000a1](https://github.com/oadrianrabelo/livro-caixa/commit/ce000a11b4907d0da0aecc78047243d6c96f1e66))
+
 ## [0.8.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.7.0...v0.8.0) (2026-11-11)
 
 
