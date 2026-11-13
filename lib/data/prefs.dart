@@ -42,17 +42,6 @@ class Prefs extends ChangeNotifier {
   Future<void> setShopping(List<CartItem> items) =>
       _db.setSetting('shopping', jsonEncode([for (final i in items) i.toJson()]));
 
-  /// Lista do que comprar (montada no relatório do mercado), só os nomes.
-  List<String> get shoppingPlan {
-    try {
-      return (jsonDecode(_values['shopping_plan'] ?? '[]') as List).cast<String>();
-    } catch (_) {
-      return const [];
-    }
-  }
-
-  Future<void> setShoppingPlan(List<String> names) => _db.setSetting('shopping_plan', jsonEncode(names));
-
   int get titheBp => _int('tithe_bp', defaultTitheBp);
   int get offeringBp => _int('offering_bp', defaultOfferingBp);
 

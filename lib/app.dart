@@ -91,8 +91,12 @@ class Shell extends StatefulWidget {
   State<Shell> createState() => _ShellState();
 }
 
-class _ShellState extends State<Shell> {
+class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   int _index = 0;
+
+  // Trocar de aba: a página nova entra com um leve esmaecer e subir.
+  late final _tabIn = AnimationController(vsync: this, duration: const Duration(milliseconds: 220), value: 1);
+  late final _tabCurve = CurvedAnimation(parent: _tabIn, curve: Curves.easeOutCubic);
 
   @override
   void initState() {
@@ -100,7 +104,18 @@ class _ShellState extends State<Shell> {
     monthNav.openPalette = _palette;
   }
 
-  void _goTab(int i) => setState(() => _index = i);
+  @override
+  void dispose() {
+    _tabIn.dispose();
+    super.dispose();
+  }
+
+  void _goTab(int i) {
+    if (i == _index) return;
+    setState(() => _index = i);
+    _tabIn.forward(from: 0);
+  }
+
   void _palette() => showCommandPalette(context, goTab: _goTab);
   void _newExpense() => showEntryForm(context, date: monthNav.defaultDate);
   void _newIncome() => showEntryForm(context, type: EntryType.receita, date: monthNav.defaultDate);
@@ -133,17 +148,23 @@ class _ShellState extends State<Shell> {
             Expanded(
               // Só a aba aberta é montada (e recalculada a cada mudança). O Mês fica
               // sempre montado para não perder a página em que você estava.
-              child: IndexedStack(
-                index: _index,
-                children: [
-                  for (var i = 0; i < _destinations.length; i++)
-                    if (i == 0)
-                      TickerMode(enabled: _index == 0, child: _destinations[0].page)
-                    else if (i == _index)
-                      _destinations[i].page
-                    else
-                      const SizedBox.shrink(),
-                ],
+              child: FadeTransition(
+                opacity: _tabCurve,
+                child: SlideTransition(
+                  position: Tween(begin: const Offset(0, 0.012), end: Offset.zero).animate(_tabCurve),
+                  child: IndexedStack(
+                    index: _index,
+                    children: [
+                      for (var i = 0; i < _destinations.length; i++)
+                        if (i == 0)
+                          TickerMode(enabled: _index == 0, child: _destinations[0].page)
+                        else if (i == _index)
+                          _destinations[i].page
+                        else
+                          const SizedBox.shrink(),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],

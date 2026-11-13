@@ -36,7 +36,7 @@ class _ShoppingReportState extends State<_ShoppingReport> {
     final thisMonth = monthTrips(data.shopItems, data.entryIds, month);
     final lastMonth = monthTrips(data.shopItems, data.entryIds, addMonths(month, -1));
     // Começa marcando o que "já está na hora" e o que já estava na lista.
-    final plan = {for (final n in scope.prefs.shoppingPlan) normalizeItem(n)};
+    final plan = {for (final i in data.plan) normalizeItem(i.name)};
     final picked = _picked ??= {
       for (final s in suggested)
         if (s.dueOn(now) || plan.contains(s.key)) s.key,
@@ -153,18 +153,18 @@ class _ShoppingReportState extends State<_ShoppingReport> {
                                 },
                         ),
                         LcButton(
-                          'Usar na calculadora',
+                          'Salvar na lista da casa',
                           icon: LucideIcons.listChecks,
                           small: true,
                           onPressed: () async {
-                            await scope.prefs.setShoppingPlan([for (final s in chosen) s.name]);
+                            // Marcados entram na lista da casa; desmarcados saem.
+                            await scope.db.addToPlan({for (final s in chosen) s.key: s.name});
+                            await scope.db.removeFromPlan([
+                              for (final s in suggested)
+                                if (!picked.contains(s.key) && plan.contains(s.key)) s.key,
+                            ]);
                             if (context.mounted) {
-                              lcToast(
-                                context,
-                                chosen.isEmpty
-                                    ? 'Lista da calculadora limpa.'
-                                    : '${chosen.length} itens em "Para pegar" na calculadora.',
-                              );
+                              lcToast(context, 'Lista da casa atualizada. Aparece nos dois celulares.');
                             }
                           },
                         ),

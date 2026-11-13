@@ -4,6 +4,7 @@
 // efeitos, foco visível, tudo com a mesma tinta e o mesmo papel do tema.
 // Use estes no lugar dos componentes do Material (TextField com rótulo
 // flutuante, DropdownButton, Checkbox, SegmentedButton, AlertDialog...).
+import 'dart:io' show Platform;
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -267,10 +268,36 @@ class _LcFieldState extends State<LcField> {
   bool get _numeric => widget.keyboardType?.index == TextInputType.number.index;
   bool get _decimal => _numeric && (widget.keyboardType?.decimal ?? false);
 
+  /// No celular, o teclado só sobe depois que a folha terminou de abrir:
+  /// as duas animações juntas é que davam a "travadinha".
+  bool get _deferAutofocus => widget.autofocus && (Platform.isAndroid || Platform.isIOS);
+
   @override
   void initState() {
     super.initState();
     _focus.addListener(_onFocus);
+    if (_deferAutofocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final anim = ModalRoute.of(context)?.animation;
+        void go() {
+          if (mounted && !_focus.hasFocus) _focus.requestFocus();
+        }
+
+        if (anim == null || anim.isCompleted) {
+          go();
+        } else {
+          late final AnimationStatusListener l;
+          l = (status) {
+            if (status == AnimationStatus.completed) {
+              anim.removeStatusListener(l);
+              go();
+            }
+          };
+          anim.addStatusListener(l);
+        }
+      });
+    }
   }
 
   @override
@@ -311,7 +338,7 @@ class _LcFieldState extends State<LcField> {
         TextField(
           controller: widget.controller,
           focusNode: _focus,
-          autofocus: widget.autofocus,
+          autofocus: widget.autofocus && !_deferAutofocus,
           obscureText: widget.obscure,
           keyboardType: widget.keyboardType,
           onChanged: widget.onChanged,
@@ -555,7 +582,7 @@ class _SelectSheetState<T> extends State<_SelectSheet<T>> {
         if (q.isEmpty || o.label.toLowerCase().contains(q)) o,
     ];
     return Padding(
-      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      padding: EdgeInsets.zero,
       child: ConstrainedBox(
         constraints: BoxConstraints(maxHeight: mq.size.height * 0.7),
         child: Column(
@@ -954,6 +981,11 @@ class LcGroup extends StatelessWidget {
               color: p.paper,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: hairline(p)),
+              // Um fio de sombra: o cartão descola do fundo sem pesar.
+              boxShadow: const [
+                BoxShadow(color: Color(0x0F000000), blurRadius: 10, spreadRadius: -2, offset: Offset(0, 4)),
+                BoxShadow(color: Color(0x0A000000), blurRadius: 1, offset: Offset(0, 1)),
+              ],
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1083,10 +1115,7 @@ Future<T?> showLcDialog<T>(
             constraints: BoxConstraints(maxWidth: width),
             // A sombra fica por fora do recorte (por dentro, vazava nas bordas).
             child: DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 40, offset: Offset(0, 16))],
-              ),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(14), boxShadow: lcFloatShadow),
               child: Material(
                 color: p.paper,
                 elevation: 0,
@@ -1387,8 +1416,60 @@ class _CalendarState extends State<_Calendar> {
 // Folha inferior (formulários)
 // ---------------------------------------------------------------------------
 
+/// Sombra em duas camadas (uma larga e suave, outra curta e nítida): dá a
+/// sensação de papel/janela "pousado" em vez de colado.
+const List<BoxShadow> lcFloatShadow = [
+  BoxShadow(color: Color(0x2E000000), blurRadius: 48, spreadRadius: -8, offset: Offset(0, 24)),
+  BoxShadow(color: Color(0x1F000000), blurRadius: 6, offset: Offset(0, 2)),
+];
+
+const _sheetCurve = Cubic(0.22, 1, 0.36, 1); // desacelera macio, sem "quicar"
+
+/// Formulários e listas. No celular sobe uma folha de baixo; no computador
+/// abre um painel no meio da tela (como as janelas do Mac).
+/// O espaço do teclado é tratado aqui: quem chama não precisa se preocupar.
 Future<T?> showLcSheet<T>(BuildContext context, {required WidgetBuilder builder, double maxWidth = 560}) {
   final p = Paper.of(context);
+  if (MediaQuery.sizeOf(context).width >= 700) {
+    return showGeneralDialog<T>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Fechar',
+      barrierColor: Colors.black.withValues(alpha: 0.26),
+      transitionDuration: const Duration(milliseconds: 260),
+      transitionBuilder: (context, anim, _, child) {
+        final t = CurvedAnimation(parent: anim, curve: _sheetCurve, reverseCurve: Curves.easeIn);
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim, curve: const Interval(0, 0.6)),
+          child: ScaleTransition(scale: Tween(begin: 0.965, end: 1.0).animate(t), child: child),
+        );
+      },
+      pageBuilder: (panelContext, _, _) => SafeArea(
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: maxWidth),
+              child: RepaintBoundary(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), boxShadow: lcFloatShadow),
+                  child: Material(
+                    color: p.paper,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      side: BorderSide(color: hairline(p)),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Padding(padding: const EdgeInsets.only(top: 20), child: builder(panelContext)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
   return showModalBottomSheet<T>(
     context: context,
     isScrollControlled: true,
@@ -1397,10 +1478,21 @@ Future<T?> showLcSheet<T>(BuildContext context, {required WidgetBuilder builder,
     backgroundColor: p.paper,
     barrierColor: Colors.black.withValues(alpha: 0.28),
     constraints: BoxConstraints(maxWidth: maxWidth),
+    sheetAnimationStyle: const AnimationStyle(
+      duration: Duration(milliseconds: 340),
+      reverseDuration: Duration(milliseconds: 220),
+      curve: _sheetCurve,
+      reverseCurve: Curves.easeIn,
+    ),
     shape: RoundedRectangleBorder(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(18)),
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       side: BorderSide(color: hairline(p)),
     ),
-    builder: builder,
+    // O teclado empurra só a folha (pelo contexto dela). Antes, a página de
+    // trás inteira era refeita a cada quadro da animação do teclado.
+    builder: (sheetContext) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
+      child: RepaintBoundary(child: builder(sheetContext)),
+    ),
   );
 }

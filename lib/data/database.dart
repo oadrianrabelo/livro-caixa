@@ -147,6 +147,14 @@ class ShopItems extends Table with SyncColumns {
   TextColumn get entryId => text().nullable()(); // o lançamento da compra
 }
 
+/// Lista de compras da casa ("Para pegar"): compartilhada entre os aparelhos.
+/// O id vem do nome (`plan-arroz`), então o mesmo item posto nos dois
+/// celulares vira um só.
+@DataClassName('PlanItem')
+class PlanItems extends Table with SyncColumns {
+  TextColumn get name => text()();
+}
+
 /// Pessoas da casa (para saber quem lançou / de quem é o gasto).
 @DataClassName('Person')
 class People extends Table with SyncColumns {
@@ -174,7 +182,19 @@ String newId() => _uuid.v4();
 int now() => DateTime.now().millisecondsSinceEpoch;
 
 @DriftDatabase(
-  tables: [Accounts, Categories, Entries, Budgets, Settings, Recurrings, People, Envelopes, Receivables, ShopItems],
+  tables: [
+    Accounts,
+    Categories,
+    Entries,
+    Budgets,
+    Settings,
+    Recurrings,
+    People,
+    Envelopes,
+    Receivables,
+    ShopItems,
+    PlanItems,
+  ],
 )
 class AppDatabase extends _$AppDatabase {
   /// O arquivo `livro_caixa.sqlite` fica na pasta de dados do app
@@ -189,7 +209,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -244,6 +264,9 @@ class AppDatabase extends _$AppDatabase {
       },
       from4To5: (m, schema) async {
         await m.createTable(schema.shopItems);
+      },
+      from5To6: (m, schema) async {
+        await m.createTable(schema.planItems);
       },
     ),
   );
@@ -679,6 +702,59 @@ class AppDatabase extends _$AppDatabase {
       );
     }
   });
+
+  // ---- Lista de compras compartilhada ----
+
+  Stream<List<PlanItem>> watchPlan() =>
+      (select(planItems)
+            ..where((t) => t.deletedAt.isNull())
+            ..orderBy([(t) => OrderingTerm(expression: t.createdAt)]))
+          .watch();
+
+  /// Põe itens na lista (quem já estava continua).
+  Future<void> addToPlan(Map<String, String> byKey) => transaction(() async {
+    final t = now();
+    for (final MapEntry(:key, :value) in byKey.entries) {
+      await into(planItems).insertOnConflictUpdate(
+        PlanItemsCompanion.insert(
+          id: 'plan-$key',
+          createdAt: t,
+          updatedAt: t,
+          name: value.trim(),
+          deletedAt: const Value(null), // volta, se já tinha sido tirado
+        ),
+      );
+    }
+  });
+
+  /// Tira itens da lista (comprados, ou desmarcados).
+  Future<void> removeFromPlan(Iterable<String> keys) => transaction(() async {
+    for (final k in keys) {
+      await softDelete(planItems, 'plan-$k');
+    }
+  });
+
+  // ---- Orçamento por categoria ----
+
+  Stream<List<Budget>> watchBudgets() => (select(budgets)..where((t) => t.deletedAt.isNull())).watch();
+
+  /// Limite mensal de uma categoria (vale para todos os meses). null = sem limite.
+  Future<void> setBudget(String categoryId, int? limit) async {
+    final id = 'budget-$categoryId';
+    if (limit == null || limit <= 0) return softDelete(budgets, id);
+    final t = now();
+    await into(budgets).insertOnConflictUpdate(
+      BudgetsCompanion.insert(
+        id: id,
+        createdAt: t,
+        updatedAt: t,
+        categoryId: categoryId,
+        month: '',
+        limitAmount: limit,
+        deletedAt: const Value(null),
+      ),
+    );
+  }
 
   // ---- Guardado (envelopes) ----
 

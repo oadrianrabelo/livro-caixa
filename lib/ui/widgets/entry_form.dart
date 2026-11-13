@@ -27,18 +27,15 @@ Future<String?> showEntryForm(
   final before = editing;
   final savedId = await showLcSheet<String>(
     context,
-    builder: (_) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: EntryForm(
-        editing: editing,
-        initialType: type,
-        initialDate: date,
-        initialAmount: amount,
-        initialAccountId: accountId,
-        initialDescription: description,
-        initialCategoryId: categoryId,
-        initialPaid: paid,
-      ),
+    builder: (_) => EntryForm(
+      editing: editing,
+      initialType: type,
+      initialDate: date,
+      initialAmount: amount,
+      initialAccountId: accountId,
+      initialDescription: description,
+      initialCategoryId: categoryId,
+      initialPaid: paid,
     ),
   );
   if (savedId == null || !context.mounted) return savedId;
@@ -170,6 +167,27 @@ class _EntryFormState extends State<EntryForm> {
         ],
       ),
     ];
+  }
+
+  /// Categoria com limite mensal: mostra quanto resta, já contando este lançamento.
+  Widget? _budgetNote(AppData data, Widget Function(String, {IconData icon}) note) {
+    final limit = data.budgetOf(_categoryId);
+    if (limit == null) return null;
+    final month = monthOf(_date);
+    var spent = 0;
+    for (final e in data.entries) {
+      if (e.categoryId == _categoryId && e.type == EntryType.despesa && e.date.startsWith(month)) {
+        if (e.id != widget.editing?.id) spent += e.amount;
+      }
+    }
+    final total = spent + (parseBRL(_amount.text) ?? 0);
+    final name = data.category(_categoryId)?.name ?? 'Categoria';
+    return note(
+      total > limit
+          ? '$name: com este, passa ${formatBRL(total - limit)} do limite de ${formatBRL(limit)} do mês.'
+          : '$name: ${formatBRL(total)} de ${formatBRL(limit)} do mês (restam ${formatBRL(limit - total)}).',
+      icon: total > limit ? LucideIcons.triangleAlert : LucideIcons.gauge,
+    );
   }
 
   /// Abre um lançamento novo igual a este, com a data de hoje.
@@ -373,7 +391,7 @@ class _EntryFormState extends State<EntryForm> {
             prefix: r'R$ ',
             hint: '0,00',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            onChanged: (_) => _installments > 1 ? setState(() {}) : null,
+            onChanged: (_) => setState(() {}), // atualiza parcelas e o aviso de limite
             // No computador, Enter já salva; no celular, pula para a descrição.
             onSubmitted: isDesktop ? (_) => _save() : null,
           ),
@@ -437,6 +455,7 @@ class _EntryFormState extends State<EntryForm> {
               ],
               onChanged: (v) => setState(() => _categoryId = v),
             ),
+          if (!transfer && _type == EntryType.despesa) ?_budgetNote(data, note),
           if (onVale) note('Pago com o vale-alimentação: não sai do Disponível.', icon: LucideIcons.utensils),
           if (_type == EntryType.despesa && data.account(from)?.type == AccountType.cartao)
             note(

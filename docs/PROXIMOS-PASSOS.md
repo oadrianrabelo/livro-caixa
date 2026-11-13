@@ -19,6 +19,8 @@ Ordem combinada com o Adrian para a próxima sessão:
 4. Testar a sincronização no celular de verdade (primeiro login real com o Google).
 5. ✅ (12/11) Notificação única por mudança no `AppData` + cache de cálculos (`AppData.memo`):
    mês, ano, previsão, relatórios. Histórico do mercado (tabela `shop_items`, banco v5).
-6. Ideias para depois: orçamento por categoria (a tabela `budgets` já existe, sem tela);
-   editar um item já anotado na calculadora; lista de compras compartilhada entre os dois celulares
-   (hoje "Para pegar" é de cada aparelho).
+6. ✅ (13/11) Orçamento por categoria, editar item da calculadora, lista de compras compartilhada
+   (tabela `plan_items`, banco v6). Acabamento: painel central no desktop, ✓ animado, totais animados,
+   sombras em camadas, transição entre abas. Travadinha das folhas: o teclado refazia a página de trás
+   a cada quadro (`viewInsetsOf` com o contexto errado) e o foco automático disputava com a animação.
+7. Ideias para depois: rolagem suave com a roda do mouse no desktop (a do Flutter anda em degraus).
