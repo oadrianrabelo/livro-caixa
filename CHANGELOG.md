@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/oadrianrabelo/livro-caixa/compare/v0.11.0...v0.11.1) (2026-11-13)
+
+
+### 🐛 Correções
+
+* **sync:** acesso do Google vencido vira "Entrar de novo", sem perder a senha da casa ([#27](https://github.com/oadrianrabelo/livro-caixa/issues/27)) ([bea3b65](https://github.com/oadrianrabelo/livro-caixa/commit/bea3b658ee47d99058c6c04f1fec18620bb1aa2c))
+
 ## [0.11.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.10.0...v0.11.0) (2026-11-13)
 
 
