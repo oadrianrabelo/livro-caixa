@@ -68,6 +68,7 @@ class SyncController extends ChangeNotifier {
     try {
       final client = await _auth.client(interactive: interactive);
       if (client == null) {
+        needsLogin = true;
         _set(SyncStatus.error, err: 'Entre de novo com a conta Google.');
         return false;
       }
@@ -116,7 +117,27 @@ class SyncController extends ChangeNotifier {
     }
   }
 
+  /// O Google pediu login de novo (acesso expirado ou revogado).
+  bool needsLogin = false;
+
+  /// Entra de novo com o Google, mantendo a senha da casa deste aparelho.
+  Future<void> reconnect() async {
+    try {
+      await _auth.signOut(); // joga fora o acesso vencido
+      final client = await _auth.client(interactive: true);
+      if (client == null) return;
+      needsLogin = false;
+      _store = DriveStore(client);
+      final key = (await _settings)['sync_key'];
+      if (key == null || key.isEmpty) return _set(SyncStatus.needsPassphrase);
+      await _connect(base64.decode(key), interactive: false);
+    } catch (e) {
+      _set(SyncStatus.error, err: _friendly(e));
+    }
+  }
+
   Future<void> signOut() async {
+    needsLogin = false;
     _debounce?.cancel();
     await _auth.signOut();
     await _db.setSetting('sync_enabled', '0');
@@ -154,6 +175,7 @@ class SyncController extends ChangeNotifier {
     try {
       _suppress = true; // o que chega do outro aparelho não dispara outra rodada
       await engine.sync();
+      needsLogin = false;
       lastSync = DateTime.now();
       _set(SyncStatus.idle);
     } catch (e) {
@@ -171,8 +193,12 @@ class SyncController extends ChangeNotifier {
     }
   }
 
-  static String _friendly(Object e) {
+  String _friendly(Object e) {
     final s = '$e';
+    if (s.contains('invalid_grant') || s.contains('expired or revoked') || s.contains('invalid_token')) {
+      needsLogin = true;
+      return 'O acesso ao Google venceu. Toque em "Entrar de novo": os dados e a senha da casa continuam aqui.';
+    }
     if (e is WrongKeyException) return s;
     if (s.contains('SocketException') || s.contains('ClientException') || s.contains('Failed host lookup')) {
       return 'Sem internet. Tenta de novo sozinho mais tarde.';
