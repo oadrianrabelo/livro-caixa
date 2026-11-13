@@ -87,7 +87,8 @@ class Paper extends ThemeExtension<Paper> {
   /// Números (valores alinhados).
   TextStyle mono(double size, {Color? color, FontWeight? weight}) => TextStyle(
     fontFamily: monoFont,
-    fontSize: size,
+    // Letra de mão nos números: um pouco maior, para ficar do tamanho das de máquina.
+    fontSize: handFonts.contains(monoFont) ? size * handScale(monoFont) * 1.2 : size,
     color: color ?? ink,
     fontWeight: weight,
     fontFeatures: const [FontFeature.tabularFigures()],

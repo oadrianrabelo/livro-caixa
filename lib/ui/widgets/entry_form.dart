@@ -7,6 +7,7 @@ import '../../data/database.dart';
 import '../../domain/cards.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
+import 'kbd.dart' show isDesktop;
 import 'tithe_dialog.dart';
 
 /// Abre o formulário de lançamento (novo ou edição) numa folha de baixo.
@@ -215,7 +216,19 @@ class _EntryFormState extends State<EntryForm> {
     }
   }
 
+  bool _saving = false; // evita lançar duas vezes com toque duplo
+
   Future<void> _save() async {
+    if (_saving) return;
+    _saving = true;
+    try {
+      await _doSave();
+    } finally {
+      _saving = false;
+    }
+  }
+
+  Future<void> _doSave() async {
     final scope = AppScope.of(context);
     final from = _accountsFor(scope.data).any((a) => a.id == _accountId)
         ? _accountId
@@ -298,7 +311,19 @@ class _EntryFormState extends State<EntryForm> {
     final editing = widget.editing;
     final rec = data.recurring(editing?.recurringId);
     final kind = _type == EntryType.receita ? CategoryKind.receita : CategoryKind.despesa;
-    final categories = data.categories.where((c) => c.kind == kind).toList();
+    // As mais usadas primeiro: a que você quer quase sempre está no topo.
+    final uses = data.memo(#categoryUses, () {
+      final m = <String, int>{};
+      for (final e in data.entries) {
+        if (e.categoryId != null) m.update(e.categoryId!, (v) => v + 1, ifAbsent: () => 1);
+      }
+      return m;
+    });
+    final categories = data.categories.where((c) => c.kind == kind).toList()
+      ..sort((a, b) {
+        final d = (uses[b.id] ?? 0).compareTo(uses[a.id] ?? 0);
+        return d != 0 ? d : a.name.toLowerCase().compareTo(b.name.toLowerCase());
+      });
     final transfer = _type == EntryType.transferencia;
     const gap = SizedBox(height: 14);
     Widget note(String text, {IconData icon = LucideIcons.info}) => Padding(
@@ -349,6 +374,8 @@ class _EntryFormState extends State<EntryForm> {
             hint: '0,00',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             onChanged: (_) => _installments > 1 ? setState(() {}) : null,
+            // No computador, Enter já salva; no celular, pula para a descrição.
+            onSubmitted: isDesktop ? (_) => _save() : null,
           ),
           gap,
           LcField(
@@ -356,6 +383,7 @@ class _EntryFormState extends State<EntryForm> {
             controller: _description,
             hint: transfer ? 'Transferência' : 'Ex.: Feira do mês',
             onChanged: (_) => setState(() {}),
+            onSubmitted: (_) => isDesktop ? _save() : hideKeyboard(),
           ),
           // Já lançou algo parecido? Toque para repetir categoria, conta e valor.
           if (_isNew && !transfer) ..._descSuggestions(data),
@@ -368,11 +396,14 @@ class _EntryFormState extends State<EntryForm> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     const LcLabel('Data'),
-                    LcButton(
-                      formatDate(_date),
-                      icon: LucideIcons.calendar,
-                      kind: LcButtonKind.secondary,
-                      onPressed: _pickDate,
+                    SizedBox(
+                      height: 42, // mesma altura do seletor ao lado
+                      child: LcButton(
+                        formatDate(_date),
+                        icon: LucideIcons.calendar,
+                        kind: LcButtonKind.secondary,
+                        onPressed: _pickDate,
+                      ),
                     ),
                   ],
                 ),

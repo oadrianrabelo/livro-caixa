@@ -41,6 +41,9 @@ const monoFonts = [
   'Space Mono',
 ];
 
+/// Os números podem usar as fontes de máquina ou as mesmas letras de mão.
+const numberFonts = [...monoFonts, ...handFonts];
+
 const defaultUiFont = 'Inter';
 const defaultHandFont = 'Caveat';
 const defaultMonoFont = 'JetBrains Mono';

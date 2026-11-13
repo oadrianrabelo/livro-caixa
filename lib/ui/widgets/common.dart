@@ -23,24 +23,39 @@ class PageBody extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 110),
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Column(
+              // Tela estreita: os botões vão para baixo do título, em vez de espremê-lo.
+              LayoutBuilder(
+                builder: (context, c) {
+                  final heading = Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: Theme.of(context).textTheme.headlineSmall),
+                      if (subtitle != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(subtitle!, style: TextStyle(fontSize: 13.5, color: p.pencil)),
+                        ),
+                    ],
+                  );
+                  if (trailing == null) return heading;
+                  if (c.maxWidth < 520) {
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(title, style: Theme.of(context).textTheme.headlineSmall),
-                        if (subtitle != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(subtitle!, style: TextStyle(fontSize: 13.5, color: p.pencil)),
-                          ),
+                        heading,
+                        const SizedBox(height: 12),
+                        SingleChildScrollView(scrollDirection: Axis.horizontal, child: trailing),
                       ],
-                    ),
-                  ),
-                  ?trailing,
-                ],
+                    );
+                  }
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(child: heading),
+                      trailing!,
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 20),
               ...children,

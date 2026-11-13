@@ -106,7 +106,7 @@ class Prefs extends ChangeNotifier {
     showMargin: showMargin,
     grain: grain,
   );
-  String get monoFont => _str('mono_font', defaultMonoFont, monoFonts);
+  String get monoFont => _str('mono_font', defaultMonoFont, numberFonts);
   ThemeMode get themeMode => ThemeMode.values.asNameMap()[_values['theme_mode']] ?? ThemeMode.system;
 
   /// De quem é este aparelho (pessoa padrão ao lançar).

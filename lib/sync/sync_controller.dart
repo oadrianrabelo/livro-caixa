@@ -127,8 +127,16 @@ class SyncController extends ChangeNotifier {
     _set(SyncStatus.off);
   }
 
+  bool _changedWhileBusy = false;
+
   void _onDataChanged() {
-    if (_suppress) return;
+    if (_suppress) {
+      // Pode ser o que chegou do outro aparelho, ou um lançamento feito bem na
+      // hora da sincronização. Na dúvida, confere de novo depois (se nada
+      // mudou, a rodada extra não envia nada).
+      _changedWhileBusy = true;
+      return;
+    }
     if (_engine != null) syncSoon(const Duration(seconds: 6));
   }
 
@@ -153,7 +161,13 @@ class SyncController extends ChangeNotifier {
     } finally {
       _busy = false;
       // deixa as atualizações das telas passarem antes de voltar a observar
-      Future<void>.delayed(const Duration(milliseconds: 500), () => _suppress = false);
+      Future<void>.delayed(const Duration(milliseconds: 500), () {
+        _suppress = false;
+        if (_changedWhileBusy) {
+          _changedWhileBusy = false;
+          syncSoon(const Duration(seconds: 6));
+        }
+      });
     }
   }
 

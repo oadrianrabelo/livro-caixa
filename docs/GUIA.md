@@ -75,7 +75,9 @@ O histórico do mercado sincroniza entre os celulares, então o relatório é da
 - **Duplicar**: ao editar um lançamento, o ícone de copiar abre um igual, com a data de hoje.
 - **Descrição**: ao digitar, o app sugere lançamentos parecidos; um toque repete categoria, conta e valor.
 - **Vencimentos**: na página do mês, contas não pagas mostram "vence hoje", "vence amanhã", "vence em 3 dias" ou "atrasada" (em vermelho).
-- **Teclado**: escolher Gasto/Entrada, conta, categoria ou data fecha o teclado.
+- **Teclado**: escolher Gasto/Entrada, conta, categoria ou data fecha o teclado. O "Enter" do teclado pula para o próximo campo; no computador, Enter no valor ou na descrição já salva.
+- **Categoria e conta**: no celular a lista abre numa folha (com busca quando é grande); as categorias mais usadas vêm primeiro.
+- **Números com letra de mão**: em Ajustes → Tipografia → Números, dá para escolher também as letras de mão.
 
 ## Sincronizar os dois celulares
 Ajustes → Sincronização → Conectar ao Google Drive (mesma conta da casa) → 1º aparelho cria a
