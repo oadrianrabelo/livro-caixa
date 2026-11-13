@@ -69,6 +69,7 @@ class SyncCard extends StatelessWidget {
           Wrap(
             spacing: 8,
             children: [
+              if (sync.needsLogin) LcButton('Entrar de novo', icon: LucideIcons.logIn, onPressed: sync.reconnect),
               LcButton(
                 'Sincronizar agora',
                 icon: LucideIcons.refreshCw,
