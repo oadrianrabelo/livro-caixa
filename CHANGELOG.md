@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.10.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.9.0...v0.10.0) (2026-11-13)
+
+
+### ✨ Novas Funcionalidades
+
+* seletor de categoria que cabe na tela, campos mais espertos e letra de mão nos números ([#23](https://github.com/oadrianrabelo/livro-caixa/issues/23)) ([b641273](https://github.com/oadrianrabelo/livro-caixa/commit/b64127344f87ad7cb3490867415216818d6337a3))
+
 ## [0.9.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.8.0...v0.9.0) (2026-11-12)
 
 
