@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.10.0...v0.11.0) (2026-11-13)
+
+
+### ✨ Novas Funcionalidades
+
+* orçamento por categoria, lista de compras da casa e acabamento mais fino ([#25](https://github.com/oadrianrabelo/livro-caixa/issues/25)) ([f94ab6a](https://github.com/oadrianrabelo/livro-caixa/commit/f94ab6a1ee62e4bd5045566139a456eb1f986504))
+
 ## [0.10.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.9.0...v0.10.0) (2026-11-13)
 
 
