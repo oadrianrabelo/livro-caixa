@@ -249,7 +249,7 @@ class _Appearance extends StatelessWidget {
                   const SizedBox(height: 14),
                   sub('Números'),
                   _FontPicker(
-                    fonts: monoFonts,
+                    fonts: numberFonts,
                     selected: prefs.monoFont,
                     onTap: prefs.setMonoFont,
                     sample: (f) => Text(r'R$ 1.234,56', style: p.copyWith(monoFont: f).mono(14)),

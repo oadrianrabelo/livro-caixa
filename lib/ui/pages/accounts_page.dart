@@ -195,22 +195,28 @@ class AccountsPage extends StatelessWidget {
         }
 
         Widget summary(String label, int value, {Color? color, String? note}) => Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 12.5, color: p.pencil, fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 2),
-              FittedBox(
-                child: Text(
-                  formatBRL(value),
-                  style: p.mono(22, weight: FontWeight.w700, color: color),
+          child: Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(fontSize: 12.5, color: p.pencil, fontWeight: FontWeight.w600),
                 ),
-              ),
-              if (note != null) Text(note, style: TextStyle(fontSize: 11.5, color: p.pencil)),
-            ],
+                const SizedBox(height: 2),
+                // Encolhe para caber: no celular os três valores dividem a largura.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    formatBRL(value),
+                    style: p.mono(22, weight: FontWeight.w700, color: color),
+                  ),
+                ),
+                if (note != null) Text(note, style: TextStyle(fontSize: 11.5, color: p.pencil)),
+              ],
+            ),
           ),
         );
 

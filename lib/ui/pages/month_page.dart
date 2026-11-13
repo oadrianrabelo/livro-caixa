@@ -284,7 +284,7 @@ class _MonthSheet extends StatelessWidget {
         ),
       if (pending.isNotEmpty)
         StickyNote(
-          text: 'Dízimo a separar de ${formatBRL(pendingTotal)}',
+          text: 'Dízimo a separar\n${formatBRL(pendingTotal)}',
           action: GestureDetector(
             onTap: () => showTitheDialog(context, incomes: pending),
             child: MouseRegion(
@@ -347,7 +347,8 @@ class _MonthSheet extends StatelessWidget {
           for (final e in list)
             LedgerRow(
               label: data.labelOf(e),
-              note: [if (e.recurringId != null) 'fixa', ?_dueNote(e)].join(' · '),
+              // O aviso de vencimento importa mais que o "fixa" (e cabe no celular).
+              note: _dueNote(e) ?? (e.recurringId != null ? 'fixa' : null),
               noteColor: _overdue(e) ? p.redInk : null,
               value: e.amount,
               checked: e.paid,

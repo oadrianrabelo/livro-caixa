@@ -4,6 +4,8 @@
 // efeitos, foco visível, tudo com a mesma tinta e o mesmo papel do tema.
 // Use estes no lugar dos componentes do Material (TextField com rótulo
 // flutuante, DropdownButton, Checkbox, SegmentedButton, AlertDialog...).
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -194,14 +196,23 @@ InputDecoration lcInputDecoration(
   );
   return InputDecoration(
     hintText: hint,
-    prefixText: prefix,
     suffixText: suffix,
-    prefixIcon: prefixIcon,
-    prefixIconConstraints: const BoxConstraints(minWidth: 36),
+    // O "R$" fica sempre à vista (o prefixText do Material some com o campo vazio).
+    prefixIcon:
+        prefixIcon ??
+        (prefix == null
+            ? null
+            : Padding(
+                padding: const EdgeInsets.only(left: 12, right: 2),
+                child: Text(prefix, style: TextStyle(color: p.pencil, fontSize: 14.5)),
+              )),
+    prefixIconConstraints: prefix != null && prefixIcon == null
+        ? const BoxConstraints()
+        : const BoxConstraints(minWidth: 36),
     isDense: true,
     filled: true,
     fillColor: p.paper,
-    contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+    contentPadding: EdgeInsets.fromLTRB(prefix != null && prefixIcon == null ? 4 : 12, 11, 12, 11),
     hintStyle: TextStyle(color: p.pencil.withValues(alpha: 0.65)),
     prefixStyle: TextStyle(color: p.pencil),
     suffixStyle: TextStyle(color: p.pencil),
@@ -214,7 +225,7 @@ InputDecoration lcInputDecoration(
   );
 }
 
-class LcField extends StatelessWidget {
+class LcField extends StatefulWidget {
   const LcField({
     super.key,
     this.label,
@@ -231,6 +242,7 @@ class LcField extends StatelessWidget {
     this.maxLength,
     this.textAlign = TextAlign.start,
     this.money = false,
+    this.capitalize = true,
   });
   final String? label;
   final TextEditingController controller;
@@ -242,28 +254,90 @@ class LcField extends StatelessWidget {
   final int? maxLength;
   final TextAlign textAlign;
   final bool money; // fonte dos números, maior
+  final bool capitalize; // primeira letra maiúscula (campos de texto)
+
+  @override
+  State<LcField> createState() => _LcFieldState();
+}
+
+class _LcFieldState extends State<LcField> {
+  FocusNode? _own;
+  FocusNode get _focus => widget.focusNode ?? (_own ??= FocusNode());
+
+  bool get _numeric => widget.keyboardType?.index == TextInputType.number.index;
+  bool get _decimal => _numeric && (widget.keyboardType?.decimal ?? false);
+
+  @override
+  void initState() {
+    super.initState();
+    _focus.addListener(_onFocus);
+  }
+
+  @override
+  void didUpdateWidget(LcField old) {
+    super.didUpdateWidget(old);
+    if (old.focusNode != widget.focusNode) {
+      (old.focusNode ?? _own)?.removeListener(_onFocus);
+      _focus.addListener(_onFocus);
+    }
+  }
+
+  /// Entrou num campo de número já preenchido: seleciona tudo, para digitar por cima.
+  void _onFocus() {
+    final c = widget.controller;
+    if (_focus.hasFocus && _numeric && c.text.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_focus.hasFocus) c.selection = TextSelection(baseOffset: 0, extentOffset: c.text.length);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _focus.removeListener(_onFocus);
+    _own?.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final p = Paper.of(context);
+    final signed = widget.keyboardType?.signed ?? false;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (label != null) LcLabel(label!),
+        if (widget.label != null) LcLabel(widget.label!),
         TextField(
-          controller: controller,
-          focusNode: focusNode,
-          autofocus: autofocus,
-          obscureText: obscure,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
-          onSubmitted: onSubmitted,
-          maxLength: maxLength,
-          textAlign: textAlign,
+          controller: widget.controller,
+          focusNode: _focus,
+          autofocus: widget.autofocus,
+          obscureText: widget.obscure,
+          keyboardType: widget.keyboardType,
+          onChanged: widget.onChanged,
+          onSubmitted: widget.onSubmitted,
+          // Sem ação própria, o "Enter" do teclado pula para o próximo campo.
+          textInputAction: widget.onSubmitted == null ? TextInputAction.next : TextInputAction.done,
+          textCapitalization: widget.capitalize && !widget.obscure && !_numeric
+              ? TextCapitalization.sentences
+              : TextCapitalization.none,
+          // Campos de número só aceitam número (e vírgula, nos de dinheiro).
+          inputFormatters: [
+            if (_decimal)
+              FilteringTextInputFormatter.allow(RegExp(signed ? r'[0-9.,\-]' : r'[0-9.,]'))
+            else if (_numeric)
+              FilteringTextInputFormatter.digitsOnly,
+          ],
+          maxLength: widget.maxLength,
+          textAlign: widget.textAlign,
           cursorColor: p.accent,
-          style: money ? p.mono(20, weight: FontWeight.w600) : TextStyle(fontSize: 14.5, color: p.ink),
-          decoration: lcInputDecoration(context, hint: hint, prefix: prefix, suffix: suffix).copyWith(counterText: ''),
+          style: widget.money ? p.mono(20, weight: FontWeight.w600) : TextStyle(fontSize: 14.5, color: p.ink),
+          decoration: lcInputDecoration(
+            context,
+            hint: widget.hint,
+            prefix: widget.prefix,
+            suffix: widget.suffix,
+          ).copyWith(counterText: ''),
         ),
       ],
     );
@@ -311,15 +385,42 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
   bool _hover = false;
   double _width = 200;
 
+  bool _up = false; // abre para cima quando falta espaço embaixo
+  double _maxH = 300;
+
+  double get _itemsHeight => widget.options.fold(8.0, (h, o) => h + (o.subtitle == null ? 36 : 46));
+
   void _toggle() {
     hideKeyboard();
     if (_portal.isShowing) {
       _portal.hide();
-    } else {
-      _width = (context.findRenderObject() as RenderBox?)?.size.width ?? 200;
-      _portal.show();
+      setState(() {});
+      return;
     }
+    final mq = MediaQuery.of(context);
+    // No celular, a lista abre numa folha: cabe tudo e os toques são folgados.
+    if (mq.size.width < 600) {
+      _openSheet();
+      return;
+    }
+    final box = context.findRenderObject() as RenderBox?;
+    _width = box?.size.width ?? 200;
+    final bottom = box == null ? 0.0 : box.localToGlobal(Offset(0, box.size.height)).dy;
+    final below = mq.size.height - mq.viewInsets.bottom - bottom - 12;
+    final above = bottom - 42 - mq.padding.top - 12;
+    // Cabe embaixo? Abre para baixo. Senão, para o lado com mais espaço.
+    _up = below < _itemsHeight && above > below;
+    _maxH = math.min(math.max(_up ? above : below, 120), 420).toDouble();
+    _portal.show();
     setState(() {});
+  }
+
+  Future<void> _openSheet() async {
+    final picked = await showLcSheet<LcOption<T>>(
+      context,
+      builder: (_) => _SelectSheet<T>(title: widget.label, options: widget.options, value: widget.value),
+    );
+    if (picked != null) widget.onChanged(picked.value);
   }
 
   @override
@@ -377,7 +478,9 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
   }
 
   Widget _menu(BuildContext context, Paper p) {
-    final maxH = MediaQuery.sizeOf(context).height * 0.4;
+    // Abre já mostrando a opção escolhida.
+    final index = widget.options.indexWhere((o) => o.value == widget.value);
+    final scroll = ScrollController(initialScrollOffset: index <= 0 ? 0 : math.max(0, index * 36.0 - _maxH / 2 + 18));
     return Stack(
       children: [
         Positioned.fill(
@@ -385,40 +488,155 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
         ),
         CompositedTransformFollower(
           link: _link,
-          targetAnchor: Alignment.bottomLeft,
-          offset: const Offset(0, 4),
-          child: Align(
-            alignment: Alignment.topLeft,
-            child: _PopIn(
-              child: Container(
-                width: _width,
-                constraints: BoxConstraints(maxHeight: maxH),
-                decoration: BoxDecoration(
-                  color: p.paper,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: hairline(p)),
-                  boxShadow: const [BoxShadow(color: Color(0x29000000), blurRadius: 24, offset: Offset(0, 8))],
-                ),
-                child: ListView(
-                  padding: const EdgeInsets.all(4),
-                  shrinkWrap: true,
-                  children: [
-                    for (final o in widget.options)
-                      _MenuItem(
-                        option: o,
-                        selected: o.value == widget.value,
-                        onTap: () {
-                          _toggle();
-                          widget.onChanged(o.value);
-                        },
-                      ),
-                  ],
-                ),
+          targetAnchor: _up ? Alignment.topLeft : Alignment.bottomLeft,
+          followerAnchor: _up ? Alignment.bottomLeft : Alignment.topLeft,
+          offset: Offset(0, _up ? -4 : 4),
+          child: _PopIn(
+            child: Container(
+              width: _width,
+              constraints: BoxConstraints(maxHeight: _maxH),
+              decoration: BoxDecoration(
+                color: p.paper,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: hairline(p)),
+                boxShadow: const [BoxShadow(color: Color(0x29000000), blurRadius: 24, offset: Offset(0, 8))],
+              ),
+              child: ListView(
+                controller: scroll,
+                padding: const EdgeInsets.all(4),
+                shrinkWrap: true,
+                children: [
+                  for (final o in widget.options)
+                    _MenuItem(
+                      option: o,
+                      selected: o.value == widget.value,
+                      onTap: () {
+                        _toggle();
+                        widget.onChanged(o.value);
+                      },
+                    ),
+                ],
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// A lista de opções numa folha (celular). Com muitas opções, ganha uma busca.
+class _SelectSheet<T> extends StatefulWidget {
+  const _SelectSheet({required this.title, required this.options, required this.value});
+  final String? title;
+  final List<LcOption<T>> options;
+  final T value;
+
+  @override
+  State<_SelectSheet<T>> createState() => _SelectSheetState<T>();
+}
+
+class _SelectSheetState<T> extends State<_SelectSheet<T>> {
+  final _query = TextEditingController();
+
+  @override
+  void dispose() {
+    _query.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final p = Paper.of(context);
+    final mq = MediaQuery.of(context);
+    final q = _query.text.trim().toLowerCase();
+    final shown = [
+      for (final o in widget.options)
+        if (q.isEmpty || o.label.toLowerCase().contains(q)) o,
+    ];
+    return Padding(
+      padding: EdgeInsets.only(bottom: mq.viewInsets.bottom),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxHeight: mq.size.height * 0.7),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (widget.title != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                child: Text(
+                  widget.title!,
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600, color: p.ink, letterSpacing: -0.3),
+                ),
+              ),
+            if (widget.options.length > 10)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextField(
+                  controller: _query,
+                  onChanged: (_) => setState(() {}),
+                  cursorColor: p.accent,
+                  style: TextStyle(fontSize: 14.5, color: p.ink),
+                  decoration: lcInputDecoration(
+                    context,
+                    hint: 'Buscar…',
+                    prefixIcon: Icon(LucideIcons.search, size: 16, color: p.pencil),
+                  ),
+                ),
+              ),
+            Flexible(
+              child: ListView(
+                shrinkWrap: true,
+                padding: EdgeInsets.fromLTRB(8, 0, 8, 12 + mq.padding.bottom),
+                children: [
+                  for (final o in shown)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        HapticFeedback.selectionClick();
+                        Navigator.pop(context, o);
+                      },
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: o.value == widget.value ? p.ink.withValues(alpha: 0.06) : null,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            if (o.leading != null) ...[
+                              SizedBox(width: 28, child: Text(o.leading!, style: const TextStyle(fontSize: 17))),
+                              const SizedBox(width: 6),
+                            ],
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(o.label, style: TextStyle(fontSize: 15.5, color: p.ink)),
+                                  if (o.subtitle != null)
+                                    Text(o.subtitle!, style: TextStyle(fontSize: 12.5, color: p.pencil)),
+                                ],
+                              ),
+                            ),
+                            if (o.value == widget.value) Icon(LucideIcons.check, size: 17, color: p.accent),
+                          ],
+                        ),
+                      ),
+                    ),
+                  if (shown.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text('Nada encontrado', style: TextStyle(color: p.pencil)),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
@@ -863,18 +1081,20 @@ Future<T?> showLcDialog<T>(
           padding: const EdgeInsets.all(16),
           child: ConstrainedBox(
             constraints: BoxConstraints(maxWidth: width),
-            child: Material(
-              color: p.paper,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
+            // A sombra fica por fora do recorte (por dentro, vazava nas bordas).
+            child: DecoratedBox(
+              decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(14),
-                side: BorderSide(color: hairline(p)),
+                boxShadow: const [BoxShadow(color: Color(0x33000000), blurRadius: 40, offset: Offset(0, 16))],
               ),
-              clipBehavior: Clip.antiAlias,
-              child: DecoratedBox(
-                decoration: const BoxDecoration(
-                  boxShadow: [BoxShadow(color: Color(0x33000000), blurRadius: 40, offset: Offset(0, 16))],
+              child: Material(
+                color: p.paper,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: hairline(p)),
                 ),
+                clipBehavior: Clip.antiAlias,
                 child: builder(dialogContext),
               ),
             ),
