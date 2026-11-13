@@ -90,6 +90,17 @@ class _CategoryEditorState extends State<_CategoryEditor> {
   late CategorySection _section = widget.editing?.section ?? CategorySection.casa;
   late int _color = widget.editing?.color ?? _swatches.first;
   bool get _special => widget.editing?.section == CategorySection.primicias;
+  final _limit = TextEditingController();
+  bool _limitLoaded = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_limitLoaded) return;
+    _limitLoaded = true;
+    final current = AppScope.of(context).data.budgetOf(widget.editing?.id);
+    if (current != null) _limit.text = centsToInput(current);
+  }
 
   Future<void> _save() async {
     final name = _name.text.trim();
@@ -106,6 +117,8 @@ class _CategoryEditorState extends State<_CategoryEditor> {
         color: _color,
         section: _special ? CategorySection.primicias : section,
       );
+      // Limite mensal (vazio = sem limite).
+      await db.setBudget(widget.editing!.id, _kind == CategoryKind.despesa ? parseBRL(_limit.text) : null);
     }
     if (mounted) Navigator.pop(context);
   }
@@ -163,6 +176,23 @@ class _CategoryEditorState extends State<_CategoryEditor> {
                 ),
             ],
           ),
+          if (widget.editing != null && _kind == CategoryKind.despesa && !_special) ...[
+            gap,
+            LcField(
+              label: 'Limite por mês (opcional)',
+              controller: _limit,
+              prefix: r'R$ ',
+              hint: 'sem limite',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                'O app avisa quando os gastos do mês chegarem perto. Aparece em Ano → Orçamento.',
+                style: TextStyle(fontSize: 12, color: p.pencil, height: 1.35),
+              ),
+            ),
+          ],
           gap,
           const LcLabel('Cor'),
           Wrap(

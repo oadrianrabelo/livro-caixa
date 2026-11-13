@@ -56,6 +56,9 @@ No mercado, toque em **Calcular compras**, no post-it do vale (ou procure "calcu
 
 O histórico do mercado sincroniza entre os celulares, então o relatório é da casa toda.
 
+- **Lista da casa**: os itens de "para pegar" são compartilhados. Um põe em casa (chip **+ Item** na calculadora, ou **Salvar na lista da casa** no relatório) e o outro vê no mercado. Ao lançar a compra, o que foi comprado sai da lista.
+- **Errou um preço?** Toque no item anotado: ele volta para os campos; corrija e toque **Salvar correção**.
+
 ## Guardado e A receber (aba Carteira)
 - **Novo envelope** (Férias, Reserva). Se já tem dinheiro guardado, coloque em "Já tem guardado".
 - **+** guarda, **−** tira. No fim do mês, "guardar a sobra →" no caderno.
@@ -68,6 +71,10 @@ O histórico do mercado sincroniza entre os celulares, então o relatório é da
 - **Este mês vs. a média**: categorias acima (ou abaixo) da média dos 3 meses anteriores.
 - **Mercado**: resumo das compras e quantos itens já estão na hora de comprar.
 - **Quem gastou**: quanto cada um gastou no ano e no mês.
+
+## Orçamento por categoria
+
+Ajustes → Categorias → toque numa categoria de gasto → **Limite por mês**. Em Ano → **Orçamento do mês** aparece uma barra por categoria (verde, laranja perto do limite, vermelha se passou). Ao lançar um gasto numa categoria com limite, o formulário já mostra quanto resta.
 
 ## Pequenas ajudas
 

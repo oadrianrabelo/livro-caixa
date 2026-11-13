@@ -4,6 +4,7 @@ import 'dart:math' as math;
 import 'dart:ui' show PointMode;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/money.dart';
 import '../theme/paper.dart';
@@ -27,8 +28,17 @@ class LedgerSheet extends StatelessWidget {
       child: DecoratedBox(
         decoration: BoxDecoration(
           color: p.paper,
-          borderRadius: BorderRadius.circular(4),
-          boxShadow: const [BoxShadow(color: Color(0x22000000), blurRadius: 6, offset: Offset(0, 2))],
+          borderRadius: BorderRadius.circular(5),
+          // Sombra macia + a beirada de duas folhas por baixo: um bloco de
+          // papel, e não um retângulo solto.
+          boxShadow: [
+            const BoxShadow(color: Color(0x24000000), blurRadius: 30, spreadRadius: -8, offset: Offset(0, 16)),
+            const BoxShadow(color: Color(0x1A000000), blurRadius: 4, offset: Offset(0, 1)),
+            BoxShadow(color: p.ink.withValues(alpha: 0.22), spreadRadius: -4, offset: const Offset(0, 7.6)),
+            BoxShadow(color: Color.lerp(p.paper, p.ink, 0.07)!, spreadRadius: -4, offset: const Offset(0, 7)),
+            BoxShadow(color: p.ink.withValues(alpha: 0.2), spreadRadius: -2, offset: const Offset(0, 4.1)),
+            BoxShadow(color: Color.lerp(p.paper, p.ink, 0.035)!, spreadRadius: -2, offset: const Offset(0, 3.5)),
+          ],
         ),
         child: CustomPaint(
           painter: _RulePainter(p),
@@ -257,12 +267,18 @@ class LedgerRow extends StatelessWidget {
     // Os pontinhos ficam atrás, na largura toda; o texto e o valor têm fundo
     // de papel e "apagam" os pontinhos embaixo deles. Assim o valor fica
     // sempre encostado à direita, como numa coluna de caderno.
+    final valueStyle = p.mono(15, color: c, weight: bold ? FontWeight.w700 : FontWeight.w500);
     final valueText = value == null
         ? null
-        : Text(
-            '$sign${formatBRL(value!)}',
-            style: p.mono(15, color: c, weight: bold ? FontWeight.w700 : FontWeight.w500),
-          );
+        : bold
+        // Totais (Disponível, Sobrou): o número "corre" até o valor novo.
+        ? TweenAnimationBuilder<double>(
+            tween: Tween(end: value!.toDouble()),
+            duration: const Duration(milliseconds: 420),
+            curve: Curves.easeOutCubic,
+            builder: (context, v, _) => Text('$sign${formatBRL(v.round())}', style: valueStyle),
+          )
+        : Text('$sign${formatBRL(value!)}', style: valueStyle);
     return MouseRegion(
       cursor: onTap != null ? SystemMouseCursors.click : MouseCursor.defer,
       child: GestureDetector(
@@ -293,14 +309,15 @@ class LedgerRow extends StatelessWidget {
                                   width: 30,
                                   child: GestureDetector(
                                     behavior: HitTestBehavior.opaque,
-                                    onTap: onCheck,
-                                    child: Text(
-                                      checked! ? '✓' : '○',
-                                      style: p.hand(
-                                        checked! ? 26 : 18,
-                                        color: checked! ? p.redInk : p.pencil,
-                                        weight: FontWeight.w700,
-                                      ),
+                                    onTap: onCheck == null
+                                        ? null
+                                        : () {
+                                            HapticFeedback.lightImpact();
+                                            onCheck!();
+                                          },
+                                    child: Align(
+                                      alignment: Alignment.bottomLeft,
+                                      child: _Check(checked: checked!, ink: p.redInk, pencil: p.pencil),
                                     ),
                                   ),
                                 ),
@@ -344,6 +361,62 @@ class LedgerRow extends StatelessWidget {
       ),
     );
   }
+}
+
+/// A caixinha da linha: um círculo a lápis; ao marcar, o ✓ é riscado à caneta.
+class _Check extends StatelessWidget {
+  const _Check({required this.checked, required this.ink, required this.pencil});
+  final bool checked;
+  final Color ink, pencil;
+
+  @override
+  Widget build(BuildContext context) => TweenAnimationBuilder<double>(
+    tween: Tween(end: checked ? 1 : 0),
+    duration: Duration(milliseconds: checked ? 260 : 140),
+    curve: Curves.easeOutCubic,
+    builder: (context, t, _) => CustomPaint(size: const Size(24, 24), painter: _CheckPainter(t, ink, pencil)),
+  );
+}
+
+class _CheckPainter extends CustomPainter {
+  _CheckPainter(this.t, this.ink, this.pencil);
+  final double t;
+  final Color ink, pencil;
+
+  // Um ✓ com cara de feito à mão (um pouco torto, perna longa).
+  static final Path _mark = Path()
+    ..moveTo(3, 13)
+    ..quadraticBezierTo(6.5, 15, 9, 20.5)
+    ..quadraticBezierTo(13, 10, 22.5, 2.5);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (t < 1) {
+      canvas.drawCircle(
+        const Offset(8, 15),
+        5.2,
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.4
+          ..color = pencil.withValues(alpha: pencil.a * (1 - t)),
+      );
+    }
+    if (t > 0) {
+      final m = _mark.computeMetrics().first;
+      canvas.drawPath(
+        m.extractPath(0, m.length * t),
+        Paint()
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2.6
+          ..strokeCap = StrokeCap.round
+          ..strokeJoin = StrokeJoin.round
+          ..color = ink,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_CheckPainter old) => old.t != t || old.ink != ink || old.pencil != pencil;
 }
 
 /// Pontinhos ligando a descrição ao valor.

@@ -125,7 +125,7 @@ class _YearPageState extends State<YearPage> {
                 ),
               ],
             ),
-            if (_year == DateTime.now().year) ...[const _VsAverage(), const _Market()],
+            if (_year == DateTime.now().year) ...[const _Budgets(), const _VsAverage(), const _Market()],
             _Categories(year: _year),
             _People(year: _year),
             _OfferingTrend(months: months, year: _year),
@@ -579,6 +579,80 @@ class _Market extends StatelessWidget {
               onTap: () => showShoppingReport(context),
             ),
         ],
+      ],
+    );
+  }
+}
+
+/// Limites mensais por categoria: quanto já foi usado neste mês.
+class _Budgets extends StatelessWidget {
+  const _Budgets();
+
+  @override
+  Widget build(BuildContext context) {
+    final data = AppScope.of(context).data;
+    final p = Paper.of(context);
+    final month = monthOf(today());
+    final list = data.memo(('budgets', month), () => budgetStatus(data.budgets, data.entries, month));
+    return LcGroup(
+      title: 'ORÇAMENTO DO MÊS',
+      description: list.isEmpty
+          ? 'Para pôr um limite: Ajustes → Categorias → toque na categoria → "Limite por mês".'
+          : null,
+      children: [
+        if (list.isEmpty) const LcRow(title: 'Nenhum limite definido'),
+        for (final b in list)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    SizedBox(width: 26, child: Text(data.category(b.categoryId)?.icon ?? '•')),
+                    Expanded(
+                      child: Text(
+                        data.category(b.categoryId)?.name ?? 'Categoria',
+                        style: TextStyle(fontSize: 14, color: p.ink, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    Text(
+                      '${formatBRL(b.spent)} de ${formatBRL(b.limit)}',
+                      style: p.mono(12.5, weight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 7),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(99),
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(end: b.used.clamp(0, 1).toDouble()),
+                    duration: const Duration(milliseconds: 500),
+                    curve: Curves.easeOutCubic,
+                    builder: (context, v, _) => LinearProgressIndicator(
+                      value: v,
+                      minHeight: 7,
+                      color: b.over
+                          ? p.redInk
+                          : b.near
+                          ? const Color(0xFFD97706)
+                          : p.greenInk,
+                      backgroundColor: hairline(p),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  b.over
+                      ? 'Passou ${formatBRL(-b.left)} do limite'
+                      : b.near
+                      ? 'Quase no limite: restam ${formatBRL(b.left)}'
+                      : 'Restam ${formatBRL(b.left)}',
+                  style: TextStyle(fontSize: 12, color: b.over ? p.redInk : p.pencil),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }

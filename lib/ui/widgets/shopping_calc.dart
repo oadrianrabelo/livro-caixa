@@ -15,13 +15,7 @@ import 'entry_form.dart';
 import 'shopping_report.dart';
 
 Future<void> showShoppingCalc(BuildContext context) async {
-  final result = await showLcSheet<int>(
-    context,
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(sheetContext).bottom),
-      child: const _ShoppingCalc(),
-    ),
-  );
+  final result = await showLcSheet<int>(context, builder: (_) => const _ShoppingCalc());
   if (result == null || !context.mounted) return;
   // Lançar o total: no vale, se houver um.
   final scope = AppScope.of(context);
@@ -37,10 +31,7 @@ Future<void> showShoppingCalc(BuildContext context) async {
     items: [for (final i in cart) (name: i.name, price: i.price, qty: i.qty)],
   );
   final bought = {for (final i in cart) normalizeItem(i.name)};
-  await scope.prefs.setShoppingPlan([
-    for (final n in scope.prefs.shoppingPlan)
-      if (!bought.contains(normalizeItem(n))) n,
-  ]);
+  await scope.db.removeFromPlan(bought.where((k) => k.isNotEmpty)); // comprado: sai da lista da casa
   await scope.prefs.setShopping(const []);
 }
 
@@ -73,12 +64,20 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
       return;
     }
     final item = CartItem(price: cents, qty: _qty, name: _name.text.trim());
-    await prefs.setShopping([item, ...prefs.shopping]);
+    final items = [...prefs.shopping];
+    final at = _editing;
+    if (at != null && at < items.length) {
+      items[at] = item; // corrigindo um item já anotado
+    } else {
+      items.insert(0, item);
+    }
+    await prefs.setShopping(items);
     _price.clear();
     _name.clear();
     setState(() {
       _qty = 1;
       _error = null;
+      _editing = null;
     });
     _priceFocus.requestFocus(); // pronto para o próximo preço
   }
@@ -92,9 +91,47 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
     _price.selection = TextSelection(baseOffset: 0, extentOffset: _price.text.length);
   }
 
+  int? _editing; // posição do item que está sendo corrigido
+
+  /// Toque num item anotado: volta para os campos, para corrigir preço, nome ou quantidade.
+  void _edit(CartItem item, int index) {
+    _price.text = centsToInput(item.price);
+    _name.text = item.name;
+    setState(() {
+      _qty = item.qty;
+      _editing = index;
+      _error = null;
+    });
+    _priceFocus.requestFocus();
+  }
+
+  /// Põe um item na lista da casa (aparece nos dois celulares).
+  Future<void> _addToPlan() async {
+    final controller = TextEditingController();
+    final name = await showLcDialog<String>(
+      context,
+      builder: (c) => LcDialogBody(
+        title: 'Pôr na lista de compras',
+        content: LcField(
+          controller: controller,
+          autofocus: true,
+          hint: 'Ex.: sabão em pó',
+          onSubmitted: (v) => Navigator.pop(c, v.trim()),
+        ),
+        actions: [
+          LcButton('Cancelar', kind: LcButtonKind.ghost, onPressed: () => Navigator.pop(c)),
+          LcButton('Adicionar', onPressed: () => Navigator.pop(c, controller.text.trim())),
+        ],
+      ),
+    );
+    if (name == null || name.isEmpty || !mounted) return;
+    await AppScope.of(context).db.addToPlan({normalizeItem(name): name});
+  }
+
   Future<void> _remove(Prefs prefs, int index) async {
     final items = [...prefs.shopping]..removeAt(index);
     await prefs.setShopping(items);
+    if (_editing != null) setState(() => _editing = null);
   }
 
   Future<void> _clear(Prefs prefs) async {
@@ -121,7 +158,7 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
         final stats = data.memo(#productStats, () => productStats(data.shopItems, data.entryIds));
         final byKey = {for (final s in stats) s.key: s};
         final inCart = {for (final i in items) normalizeItem(i.name)};
-        final plan = scope.prefs.shoppingPlan;
+        final plan = [for (final i in data.plan) i.name]; // lista da casa (sincroniza)
         final query = normalizeItem(_name.text);
         final suggestions = query.length < 2
             ? const <ProductStats>[]
@@ -187,9 +224,9 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                   ],
                 ),
               ),
-              if (plan.isNotEmpty) ...[
+              ...[
                 const SizedBox(height: 12),
-                const LcLabel('Para pegar'),
+                const LcLabel('Lista da casa (para pegar)'),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
@@ -203,6 +240,12 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                         },
                         done: inCart.contains(normalizeItem(n)),
                       ),
+                    LcChip(
+                      'Item',
+                      selected: false,
+                      onTap: _addToPlan,
+                      leading: Icon(LucideIcons.plus, size: 13, color: p.pencil),
+                    ),
                   ],
                 ),
               ],
@@ -279,7 +322,11 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                 Text(_error!, style: TextStyle(fontSize: 12.5, color: p.redInk)),
               ],
               const SizedBox(height: 12),
-              LcButton('Anotar', icon: LucideIcons.plus, onPressed: () => _add(scope.prefs)),
+              LcButton(
+                _editing == null ? 'Anotar' : 'Salvar correção',
+                icon: _editing == null ? LucideIcons.plus : LucideIcons.check,
+                onPressed: () => _add(scope.prefs),
+              ),
               if (items.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 for (var i = 0; i < items.length; i++)
@@ -291,14 +338,25 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                     child: Row(
                       children: [
                         Expanded(
-                          child: Text(
-                            [
-                              if (items[i].name.isNotEmpty) items[i].name,
-                              if (items[i].qty > 1) '${items[i].qty} × ${formatBRL(items[i].price)}',
-                              if (items[i].name.isEmpty && items[i].qty == 1) 'Item ${items.length - i}',
-                            ].join(' · '),
-                            style: TextStyle(fontSize: 14, color: p.ink),
-                            overflow: TextOverflow.ellipsis,
+                          child: GestureDetector(
+                            behavior: HitTestBehavior.opaque,
+                            onTap: () => _edit(items[i], i),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                [
+                                  if (items[i].name.isNotEmpty) items[i].name,
+                                  if (items[i].qty > 1) '${items[i].qty} × ${formatBRL(items[i].price)}',
+                                  if (items[i].name.isEmpty && items[i].qty == 1) 'Item ${items.length - i}',
+                                ].join(' · '),
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: p.ink,
+                                  fontWeight: _editing == i ? FontWeight.w700 : null,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
                           ),
                         ),
                         Text(formatBRL(items[i].total), style: p.mono(14)),

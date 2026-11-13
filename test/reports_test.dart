@@ -82,4 +82,23 @@ void main() {
     expect(trips.trips, 1);
     expect(trips.total, 1100);
   });
+
+  test('orçamento: usado, perto e estourado', () {
+    Budget b(String cat, int limit) =>
+        Budget(id: 'budget-$cat', createdAt: 0, updatedAt: 0, categoryId: cat, month: '', limitAmount: limit);
+    final list = budgetStatus(
+      [b('mercado', 40000), b('lazer', 10000), b('pets', 5000)],
+      [
+        spend('2026-11-05', 34000, cat: 'mercado'),
+        spend('2026-11-06', 12000, cat: 'lazer'),
+        spend('2026-10-06', 99999, cat: 'pets'), // outro mês
+      ],
+      '2026-11',
+    );
+    expect(list.map((s) => s.categoryId), ['lazer', 'mercado', 'pets']);
+    expect(list[0].over, isTrue);
+    expect(list[1].near, isTrue);
+    expect(list[1].left, 6000);
+    expect(list[2].spent, 0);
+  });
 }

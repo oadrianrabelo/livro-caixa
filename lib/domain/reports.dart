@@ -56,3 +56,24 @@ Map<String?, int> spentByPerson(Iterable<Entry> entries, String prefix) {
   }
   return out;
 }
+
+class BudgetStatus {
+  BudgetStatus(this.categoryId, this.limit, this.spent);
+  final String categoryId;
+  final int limit, spent;
+  double get used => limit == 0 ? 0 : spent / limit;
+  int get left => limit - spent;
+  bool get over => spent > limit;
+  bool get near => !over && used >= 0.8;
+}
+
+/// Quanto de cada limite mensal já foi usado em [month]. Os mais apertados primeiro.
+List<BudgetStatus> budgetStatus(Iterable<Budget> budgets, Iterable<Entry> entries, String month) {
+  final spent = <String, int>{};
+  for (final e in entries) {
+    if (!isSpending(e) || e.categoryId == null || !e.date.startsWith(month)) continue;
+    spent.update(e.categoryId!, (v) => v + e.amount, ifAbsent: () => e.amount);
+  }
+  return [for (final b in budgets) BudgetStatus(b.categoryId, b.limitAmount, spent[b.categoryId] ?? 0)]
+    ..sort((a, b) => b.used.compareTo(a.used));
+}

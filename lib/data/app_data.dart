@@ -24,6 +24,8 @@ class AppData extends ChangeNotifier {
       db.watchEnvelopes().listen((v) => _set(() => envelopes = v)),
       db.watchReceivables().listen((v) => _set(() => receivables = v)),
       db.watchShopItems().listen((v) => _set(() => shopItems = v)),
+      db.watchPlan().listen((v) => _set(() => plan = v)),
+      db.watchBudgets().listen((v) => _set(() => budgets = v)),
     ];
     db.ensureRecurringEntries(monthOf(today())); // contas fixas do mês atual
   }
@@ -39,6 +41,11 @@ class AppData extends ChangeNotifier {
   List<Envelope> envelopes = [];
   List<Receivable> receivables = [];
   List<ShopItem> shopItems = []; // histórico do mercado
+  List<PlanItem> plan = []; // lista de compras da casa
+  List<Budget> budgets = []; // limites mensais por categoria
+
+  /// Limite mensal da categoria (centavos), se houver.
+  int? budgetOf(String? categoryId) => budgets.where((b) => b.categoryId == categoryId).firstOrNull?.limitAmount;
 
   /// Sobe a cada mudança; serve de chave para guardar cálculos pesados.
   int version = 0;
