@@ -21,6 +21,28 @@ int accountBalance(Account account, Iterable<Entry> entries) {
   return balance;
 }
 
+/// Uma linha do extrato: quanto mexeu na conta e o saldo logo depois.
+typedef StatementLine = ({Entry entry, int delta, int after});
+
+/// Quanto um lançamento muda o saldo de uma conta (0 se não mexe nela).
+int deltaFor(Account account, Entry e) => switch (e.type) {
+  EntryType.receita when e.accountId == account.id => e.amount,
+  EntryType.despesa when e.accountId == account.id => -e.amount,
+  EntryType.transferencia => (e.toAccountId == account.id ? e.amount : 0) - (e.accountId == account.id ? e.amount : 0),
+  _ => 0,
+};
+
+/// Extrato da conta: os lançamentos pagos que mexeram nela, do mais antigo
+/// ao mais novo, com o saldo depois de cada um (começa no saldo inicial).
+List<StatementLine> accountStatement(Account account, Iterable<Entry> entries) {
+  final moves = [
+    for (final e in entries)
+      if (e.deletedAt == null && e.paid && deltaFor(account, e) != 0) e,
+  ]..sort((a, b) => a.date != b.date ? a.date.compareTo(b.date) : a.createdAt.compareTo(b.createdAt));
+  var balance = account.initialBalance;
+  return [for (final e in moves) (entry: e, delta: deltaFor(account, e), after: balance += deltaFor(account, e))];
+}
+
 /// A página do mês, como no caderno:
 ///   Entradas − Dízimo − Oferta = Disponível
 ///   Disponível − (Cartão + Casa + Pessoal + Outros) = Sobrou

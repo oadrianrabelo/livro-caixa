@@ -33,7 +33,14 @@ class _EntriesPageState extends State<EntriesPage> {
         final list = data
             .monthEntries(_month)
             .where((e) => _filter == null || e.type == _filter)
-            .where((e) => q.isEmpty || data.labelOf(e).toLowerCase().contains(q))
+            // Busca também pelo nome da conta (ex.: "bb").
+            .where(
+              (e) =>
+                  q.isEmpty ||
+                  data.labelOf(e).toLowerCase().contains(q) ||
+                  (data.account(e.accountId)?.name.toLowerCase().contains(q) ?? false) ||
+                  (data.account(e.toAccountId)?.name.toLowerCase().contains(q) ?? false),
+            )
             .toList();
         final byDay = <String, List<Entry>>{};
         for (final e in list) {

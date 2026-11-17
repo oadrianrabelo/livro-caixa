@@ -63,11 +63,15 @@ O histórico do mercado sincroniza entre os celulares, então o relatório é da
 
 **Lançar → Transferência**: **De** "Em mãos", **Para** o banco, o valor, e salvar. "Já feita" vem ligado: o dinheiro sai de uma e entra na outra na hora. Transferência não é gasto nem entrada: não mexe no Disponível nem gera dízimo (o dízimo já foi separado quando o dinheiro entrou).
 
+## Extrato da conta
+
+Carteira → toque numa conta: aparece o **saldo agora** e o extrato, do mais novo ao mais antigo, com quanto ficou depois de cada lançamento, até o saldo inicial. Embaixo, os lançados na conta que ainda não foram pagos (não contam no saldo). Toque num lançamento para corrigir. Em Lançamentos, a busca também acha pelo nome da conta (ex.: "bb").
+
 ## Acertar o saldo de uma conta
 
-Carteira → toque na conta → **Saldo atual**: ponha o que o banco mostra agora e salve. Os lançamentos continuam como estão; o app só ajusta o ponto de partida da conta para o saldo bater.
+Carteira → toque na conta → **Editar** → **Saldo atual**: ponha o que o banco mostra agora e salve. Os lançamentos continuam como estão; o app só ajusta o ponto de partida da conta para o saldo bater.
 
-**Excluir uma conta criada por engano**: toque na conta → lixeira. Se ela tiver lançamentos, eles passam para outra conta do mesmo tipo (os valores continuam lançados) ou dá para só arquivar.
+**Excluir uma conta criada por engano**: toque na conta → Editar → lixeira. Se ela tiver lançamentos, eles passam para outra conta do mesmo tipo (os valores continuam lançados) ou dá para só arquivar.
 
 ## Guardado e A receber (aba Carteira)
 - **Novo envelope** (Férias, Reserva). Se já tem dinheiro guardado, coloque em "Já tem guardado".
