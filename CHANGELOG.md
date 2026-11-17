@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.11.2...v0.12.0) (2026-11-17)
+
+
+### ✨ Novas Funcionalidades
+
+* extrato da conta (de onde veio o saldo) e busca por nome da conta ([#31](https://github.com/oadrianrabelo/livro-caixa/issues/31)) ([4350e46](https://github.com/oadrianrabelo/livro-caixa/commit/4350e46007d53c3eabbdd9a661e524a175cf3931))
+
 ## [0.11.2](https://github.com/oadrianrabelo/livro-caixa/compare/v0.11.1...v0.11.2) (2026-11-17)
 
 
