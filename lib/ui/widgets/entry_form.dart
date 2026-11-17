@@ -100,7 +100,7 @@ class _EntryFormState extends State<EntryForm> {
   late String? _toAccountId = widget.editing?.toAccountId;
   late String? _categoryId = widget.editing?.categoryId ?? widget.initialCategoryId;
   // Novo lançamento: ainda a pagar (a calculadora de compras passa "pago": foi no caixa).
-  late bool _paid = widget.editing?.paid ?? widget.initialPaid ?? false;
+  late bool _paid = widget.editing?.paid ?? widget.initialPaid ?? (widget.initialType == EntryType.transferencia);
   late bool _tithable = widget.editing?.titheStatus != TitheStatus.isento;
   String? _personId;
   bool _personReady = false;
@@ -380,6 +380,8 @@ class _EntryFormState extends State<EntryForm> {
             onChanged: (v) => setState(() {
               _type = v;
               _categoryId = null;
+              // Transferência (ex.: depositar o dinheiro em mãos) costuma ser na hora.
+              if (_isNew && v == EntryType.transferencia) _paid = true;
             }),
           ),
           gap,
@@ -488,7 +490,14 @@ class _EntryFormState extends State<EntryForm> {
             child: Column(
               children: [
                 LcToggleRow(
-                  title: _type == EntryType.receita ? 'Já recebido' : 'Já pago',
+                  title: switch (_type) {
+                    EntryType.receita => 'Já recebido',
+                    EntryType.transferencia => 'Já feita',
+                    _ => 'Já pago',
+                  },
+                  subtitle: _type == EntryType.transferencia && !_paid
+                      ? 'Desligada, o dinheiro ainda não sai de uma conta nem entra na outra.'
+                      : null,
                   value: _paid,
                   onChanged: (v) => setState(() => _paid = v),
                 ),

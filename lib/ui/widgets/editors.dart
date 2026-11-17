@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../core/money.dart';
 import '../../data/app_data.dart';
 import '../../data/database.dart';
+import '../../domain/finance.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
 
@@ -269,11 +270,27 @@ class _AccountEditor extends StatefulWidget {
 
 class _AccountEditorState extends State<_AccountEditor> {
   late final _name = TextEditingController(text: widget.editing?.name ?? '');
-  late final _initial = TextEditingController(
-    text: widget.editing == null || widget.editing!.initialBalance == 0
-        ? ''
-        : centsToInput(widget.editing!.initialBalance),
-  );
+  // Pede o saldo de HOJE (o que o banco mostra). O app calcula o saldo
+  // inicial que faz a conta bater, descontando o que já foi lançado.
+  late final _current = TextEditingController();
+  bool _loaded = false;
+
+  /// O que os lançamentos pagos já mexeram nesta conta.
+  int _movements() {
+    final a = widget.editing;
+    if (a == null) return 0;
+    return accountBalance(a, AppScope.of(context).data.entries) - a.initialBalance;
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loaded || widget.editing == null) return;
+    _loaded = true;
+    final balance = widget.editing!.initialBalance + _movements();
+    if (balance != 0) _current.text = centsToInput(balance);
+  }
+
   late final _renewAmount = TextEditingController(
     text: widget.editing?.renewAmount == null ? '' : centsToInput(widget.editing!.renewAmount!),
   );
@@ -284,12 +301,89 @@ class _AccountEditorState extends State<_AccountEditor> {
   late final _due = TextEditingController(text: widget.editing?.dueDay == null ? '' : '${widget.editing!.dueDay}');
   late AccountType _type = widget.editing?.type ?? AccountType.corrente;
 
+  /// Excluir: sem lançamentos, some direto. Com lançamentos, eles vão para
+  /// outra conta (os valores continuam), ou a conta é só arquivada.
+  Future<void> _delete() async {
+    final a = widget.editing!;
+    final scope = AppScope.of(context);
+    final data = scope.data;
+    final used =
+        data.entries.any((e) => e.accountId == a.id || e.toAccountId == a.id) ||
+        data.recurrings.any((r) => r.accountId == a.id);
+    if (!used) {
+      if (await lcConfirm(
+        context,
+        'Essa conta não tem lançamentos.',
+        confirm: 'Excluir',
+        danger: true,
+        title: 'Excluir "${a.name}"?',
+      )) {
+        await scope.db.softDelete(scope.db.accounts, a.id);
+        if (mounted) Navigator.pop(context);
+      }
+      return;
+    }
+    // Vale só vai para vale, cartão para cartão, e conta comum para conta comum.
+    String kindOf(Account x) => x.type == AccountType.vale || x.type == AccountType.cartao ? x.type.name : 'comum';
+    final others = [
+      for (final o in data.accounts)
+        if (o.id != a.id && !o.archived && kindOf(o) == kindOf(a)) o,
+    ];
+    String? target = others.where((o) => o.type == a.type).firstOrNull?.id ?? others.firstOrNull?.id;
+    final count = data.entries.where((e) => e.accountId == a.id || e.toAccountId == a.id).length;
+    final choice = await showLcDialog<String>(
+      context,
+      builder: (c) => StatefulBuilder(
+        builder: (c, setLocal) => LcDialogBody(
+          title: 'Excluir "${a.name}"?',
+          content: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Ela tem $count ${count == 1 ? 'lançamento' : 'lançamentos'}. Para não perder os valores, '
+                'eles passam para outra conta:',
+                style: const TextStyle(height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              if (others.isEmpty)
+                const Text('Crie outra conta primeiro (ou arquive esta).')
+              else
+                LcSelect<String?>(
+                  label: 'Mover para',
+                  value: target,
+                  options: [for (final o in others) LcOption(o.id, o.name)],
+                  onChanged: (v) => setLocal(() => target = v),
+                ),
+            ],
+          ),
+          actions: [
+            LcButton('Só arquivar', kind: LcButtonKind.ghost, onPressed: () => Navigator.pop(c, 'archive')),
+            LcButton(
+              'Mover e excluir',
+              kind: LcButtonKind.danger,
+              onPressed: target == null ? null : () => Navigator.pop(c, 'move'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (choice == 'archive') {
+      await scope.db.setAccountArchived(a.id, true);
+    } else if (choice == 'move' && target != null) {
+      await scope.db.deleteAccountMoving(a.id, target!);
+    } else {
+      return;
+    }
+    if (mounted) Navigator.pop(context);
+  }
+
   Future<void> _save() async {
     final name = _name.text.trim();
     if (name.isEmpty) return;
     final db = AppScope.of(context).db;
     final vale = _type == AccountType.vale;
-    final initial = vale ? 0 : parseBRL(_initial.text) ?? 0;
+    final initial = vale ? 0 : (parseBRL(_current.text) ?? 0) - _movements();
     final renewAmount = vale ? parseBRL(_renewAmount.text) ?? 0 : null;
     final renewDay = vale ? (int.tryParse(_renewDay.text) ?? 20).clamp(1, 28) : null;
     final card = _type == AccountType.cartao;
@@ -383,17 +477,34 @@ class _AccountEditorState extends State<_AccountEditor> {
               'Lance as compras neste cartão: elas somam na fatura certa, que aparece em Cartão no mês do vencimento.',
               style: TextStyle(fontSize: 12.5, color: Paper.of(context).pencil),
             ),
-          ] else
+          ] else ...[
             LcField(
-              label: 'Saldo inicial',
-              controller: _initial,
+              label: widget.editing == null ? 'Quanto tem nela hoje' : 'Saldo atual',
+              controller: _current,
               prefix: r'R$ ',
               hint: '0,00',
               keyboardType: const TextInputType.numberWithOptions(decimal: true, signed: true),
             ),
+            if (widget.editing != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: Text(
+                  'Ponha o que o banco mostra agora. Os lançamentos continuam como estão: '
+                  'o app só acerta o ponto de partida da conta.',
+                  style: TextStyle(fontSize: 12, color: Paper.of(context).pencil, height: 1.35),
+                ),
+              ),
+          ],
         ],
       ),
       actions: [
+        if (widget.editing != null)
+          LcIconButton(
+            LucideIcons.trash2,
+            tooltip: 'Excluir conta',
+            color: Paper.of(context).redInk,
+            onPressed: _delete,
+          ),
         LcButton('Cancelar', kind: LcButtonKind.ghost, onPressed: () => Navigator.pop(context)),
         LcButton(widget.editing == null ? 'Criar' : 'Salvar', onPressed: _save),
       ],
