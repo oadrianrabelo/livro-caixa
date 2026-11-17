@@ -333,7 +333,7 @@ class AppDatabase extends _$AppDatabase {
 
   // ---- Escritas ----
 
-  Future<void> addAccount({
+  Future<String> addAccount({
     required String name,
     required AccountType type,
     int initialBalance = 0,
@@ -341,11 +341,12 @@ class AppDatabase extends _$AppDatabase {
     int? renewAmount,
     int? closingDay,
     int? dueDay,
-  }) {
+  }) async {
     final t = now();
-    return into(accounts).insert(
+    final id = newId();
+    await into(accounts).insert(
       AccountsCompanion.insert(
-        id: newId(),
+        id: id,
         createdAt: t,
         updatedAt: t,
         name: name,
@@ -357,6 +358,7 @@ class AppDatabase extends _$AppDatabase {
         dueDay: Value(dueDay),
       ),
     );
+    return id;
   }
 
   Future<void> updateAccount(
@@ -398,6 +400,43 @@ class AppDatabase extends _$AppDatabase {
       updatedAt: Value(now()),
     ),
   );
+
+  /// Exclui uma conta levando os lançamentos (e contas fixas) dela para [toId].
+  /// Os valores continuam lançados; só mudam de conta. Uma transferência entre
+  /// as duas contas vira de [toId] para [toId] e perde o sentido: sai junto.
+  Future<void> deleteAccountMoving(String id, String toId) => transaction(() async {
+    final t = now();
+    await customUpdate(
+      'UPDATE entries SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL AND type = ? '
+      'AND ((account_id = ? AND to_account_id = ?) OR (account_id = ? AND to_account_id = ?))',
+      variables: [
+        Variable.withInt(t),
+        Variable.withInt(t),
+        Variable.withString(EntryType.transferencia.name),
+        Variable.withString(id),
+        Variable.withString(toId),
+        Variable.withString(toId),
+        Variable.withString(id),
+      ],
+      updates: {entries},
+    );
+    await customUpdate(
+      'UPDATE entries SET account_id = ?, updated_at = ? WHERE account_id = ?',
+      variables: [Variable.withString(toId), Variable.withInt(t), Variable.withString(id)],
+      updates: {entries},
+    );
+    await customUpdate(
+      'UPDATE entries SET to_account_id = ?, updated_at = ? WHERE to_account_id = ?',
+      variables: [Variable.withString(toId), Variable.withInt(t), Variable.withString(id)],
+      updates: {entries},
+    );
+    await customUpdate(
+      'UPDATE recurrings SET account_id = ?, updated_at = ? WHERE account_id = ?',
+      variables: [Variable.withString(toId), Variable.withInt(t), Variable.withString(id)],
+      updates: {recurrings},
+    );
+    await softDelete(accounts, id);
+  });
 
   Future<void> setAccountArchived(String id, bool archived) => (update(
     accounts,

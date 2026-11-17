@@ -59,6 +59,12 @@ O histórico do mercado sincroniza entre os celulares, então o relatório é da
 - **Lista da casa**: os itens de "para pegar" são compartilhados. Um põe em casa (chip **+ Item** na calculadora, ou **Salvar na lista da casa** no relatório) e o outro vê no mercado. Ao lançar a compra, o que foi comprado sai da lista.
 - **Errou um preço?** Toque no item anotado: ele volta para os campos; corrija e toque **Salvar correção**.
 
+## Acertar o saldo de uma conta
+
+Carteira → toque na conta → **Saldo atual**: ponha o que o banco mostra agora e salve. Os lançamentos continuam como estão; o app só ajusta o ponto de partida da conta para o saldo bater.
+
+**Excluir uma conta criada por engano**: toque na conta → lixeira. Se ela tiver lançamentos, eles passam para outra conta do mesmo tipo (os valores continuam lançados) ou dá para só arquivar.
+
 ## Guardado e A receber (aba Carteira)
 - **Novo envelope** (Férias, Reserva). Se já tem dinheiro guardado, coloque em "Já tem guardado".
 - **+** guarda, **−** tira. No fim do mês, "guardar a sobra →" no caderno.

@@ -23,8 +23,8 @@ class AccountsPage extends StatelessWidget {
     if (used) {
       if (await lcConfirm(
         context,
-        '"${a.name}" tem lançamentos, então não dá para excluir. Arquivar esconde a conta dos formulários, '
-        'mas mantém o histórico.',
+        '"${a.name}" tem lançamentos. Arquivar esconde a conta dos formulários e mantém o histórico. '
+        'Para excluir de vez (passando os lançamentos para outra conta), toque na conta e use a lixeira.',
         confirm: 'Arquivar',
         title: 'Arquivar conta?',
       )) {
