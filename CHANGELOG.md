@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/oadrianrabelo/livro-caixa/compare/v0.11.1...v0.11.2) (2026-11-17)
+
+
+### 🐛 Correções
+
+* acertar o saldo atual da conta e excluir conta levando os lançamentos ([#29](https://github.com/oadrianrabelo/livro-caixa/issues/29)) ([bad9c0e](https://github.com/oadrianrabelo/livro-caixa/commit/bad9c0e1d144efd191ba8aaef5483751ff155185))
+
 ## [0.11.1](https://github.com/oadrianrabelo/livro-caixa/compare/v0.11.0...v0.11.1) (2026-11-13)
 
 
