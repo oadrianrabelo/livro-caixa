@@ -10,6 +10,7 @@ import '../../domain/finance.dart';
 import '../../domain/vale.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
+import '../widgets/account_statement.dart';
 import '../widgets/common.dart';
 import '../widgets/editors.dart';
 import '../widgets/wallet_sheets.dart';
@@ -24,7 +25,7 @@ class AccountsPage extends StatelessWidget {
       if (await lcConfirm(
         context,
         '"${a.name}" tem lançamentos. Arquivar esconde a conta dos formulários e mantém o histórico. '
-        'Para excluir de vez (passando os lançamentos para outra conta), toque na conta e use a lixeira.',
+        'Para excluir de vez (passando os lançamentos para outra conta), toque na conta → Editar → lixeira.',
         confirm: 'Arquivar',
         title: 'Arquivar conta?',
       )) {
@@ -73,7 +74,8 @@ class AccountsPage extends StatelessWidget {
             subtitle: vale
                 ? 'Vale · renova dia ${a.renewDay} com ${formatBRL(a.renewAmount ?? 0)}'
                 : accountTypeLabels[a.type],
-            onTap: () => showAccountEditor(context, editing: a),
+            // Conta comum: abre o extrato (de onde veio o saldo). Vale: o editor.
+            onTap: () => vale ? showAccountEditor(context, editing: a) : showAccountStatement(context, a),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
