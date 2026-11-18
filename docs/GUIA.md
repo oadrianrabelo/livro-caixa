@@ -99,6 +99,7 @@ Ajustes → Categorias → toque numa categoria de gasto → **Limite por mês**
 
 ## Pequenas ajudas
 
+- **Nova categoria na hora**: no lançamento, abra Categoria → **Nova categoria…** no fim da lista; ela já volta escolhida.
 - **Valores sem vírgula**: nos campos de dinheiro é só digitar os números, como nos bancos: 1234 vira 12,34.
 
 - **Excluiu sem querer?** Aparece "Desfazer" por alguns segundos.

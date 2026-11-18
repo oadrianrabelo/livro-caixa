@@ -442,18 +442,19 @@ class AppDatabase extends _$AppDatabase {
     accounts,
   )..where((a) => a.id.equals(id))).write(AccountsCompanion(archived: Value(archived), updatedAt: Value(now())));
 
-  Future<void> addCategory({
+  Future<String> addCategory({
     required String name,
     required CategoryKind kind,
     required String icon,
     required int color,
     CategorySection? section,
     String? project,
-  }) {
+  }) async {
     final t = now();
-    return into(categories).insert(
+    final id = newId();
+    await into(categories).insert(
       CategoriesCompanion.insert(
-        id: newId(),
+        id: id,
         createdAt: t,
         updatedAt: t,
         name: name,
@@ -464,6 +465,7 @@ class AppDatabase extends _$AppDatabase {
         project: Value(project),
       ),
     );
+    return id;
   }
 
   Future<Entry?> getEntry(String id) => (select(entries)..where((e) => e.id.equals(id))).getSingleOrNull();

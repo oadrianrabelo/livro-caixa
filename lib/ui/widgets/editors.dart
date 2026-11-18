@@ -73,12 +73,18 @@ const _emojis = [
 
 // ---------------------------------------------------------------------------
 
-Future<void> showCategoryEditor(BuildContext context, {Category? editing}) =>
-    showLcDialog(context, builder: (_) => _CategoryEditor(editing: editing));
+/// Cria ou edita uma categoria. Ao criar, devolve o id da nova.
+/// [kind]: já começa como gasto ou entrada (ex.: criada de dentro do formulário).
+Future<String?> showCategoryEditor(BuildContext context, {Category? editing, CategoryKind? kind}) =>
+    showLcDialog<String>(
+      context,
+      builder: (_) => _CategoryEditor(editing: editing, kind: kind),
+    );
 
 class _CategoryEditor extends StatefulWidget {
-  const _CategoryEditor({this.editing});
+  const _CategoryEditor({this.editing, this.kind});
   final Category? editing;
+  final CategoryKind? kind;
 
   @override
   State<_CategoryEditor> createState() => _CategoryEditorState();
@@ -87,7 +93,7 @@ class _CategoryEditor extends StatefulWidget {
 class _CategoryEditorState extends State<_CategoryEditor> {
   late final _name = TextEditingController(text: widget.editing?.name ?? '');
   late final _icon = TextEditingController(text: widget.editing?.icon ?? '🏷️');
-  late CategoryKind _kind = widget.editing?.kind ?? CategoryKind.despesa;
+  late CategoryKind _kind = widget.editing?.kind ?? widget.kind ?? CategoryKind.despesa;
   late CategorySection _section = widget.editing?.section ?? CategorySection.casa;
   late int _color = widget.editing?.color ?? _swatches.first;
   bool get _special => widget.editing?.section == CategorySection.primicias;
@@ -109,7 +115,15 @@ class _CategoryEditorState extends State<_CategoryEditor> {
     final db = AppScope.of(context).db;
     final section = _kind == CategoryKind.despesa ? _section : null;
     if (widget.editing == null) {
-      await db.addCategory(name: name, kind: _kind, icon: _icon.text.trim(), color: _color, section: section);
+      final id = await db.addCategory(
+        name: name,
+        kind: _kind,
+        icon: _icon.text.trim(),
+        color: _color,
+        section: section,
+      );
+      if (mounted) Navigator.pop(context, id);
+      return;
     } else {
       await db.updateCategory(
         widget.editing!.id,

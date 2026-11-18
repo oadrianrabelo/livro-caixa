@@ -432,12 +432,18 @@ class LcSelect<T> extends StatefulWidget {
     required this.options,
     required this.onChanged,
     this.placeholder = 'Escolher…',
+    this.createLabel,
+    this.onCreate,
   });
   final String? label;
   final T value;
   final List<LcOption<T>> options;
   final ValueChanged<T> onChanged;
   final String placeholder;
+
+  /// Última linha da lista ("+ Nova categoria…"): cria uma opção na hora.
+  final String? createLabel;
+  final VoidCallback? onCreate;
 
   @override
   State<LcSelect<T>> createState() => _LcSelectState<T>();
@@ -452,7 +458,8 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
   bool _up = false; // abre para cima quando falta espaço embaixo
   double _maxH = 300;
 
-  double get _itemsHeight => widget.options.fold(8.0, (h, o) => h + (o.subtitle == null ? 36 : 46));
+  double get _itemsHeight =>
+      widget.options.fold(8.0, (h, o) => h + (o.subtitle == null ? 36 : 46)) + (widget.onCreate == null ? 0 : 36);
 
   void _toggle() {
     hideKeyboard();
@@ -480,11 +487,20 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
   }
 
   Future<void> _openSheet() async {
-    final picked = await showLcSheet<LcOption<T>>(
+    final picked = await showLcSheet<Object>(
       context,
-      builder: (_) => _SelectSheet<T>(title: widget.label, options: widget.options, value: widget.value),
+      builder: (_) => _SelectSheet<T>(
+        title: widget.label,
+        options: widget.options,
+        value: widget.value,
+        createLabel: widget.onCreate == null ? null : (widget.createLabel ?? 'Criar…'),
+      ),
     );
-    if (picked != null) widget.onChanged(picked.value);
+    if (picked == _SelectSheet.create) {
+      widget.onCreate?.call();
+    } else if (picked is LcOption<T>) {
+      widget.onChanged(picked.value);
+    }
   }
 
   @override
@@ -579,6 +595,15 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
                         widget.onChanged(o.value);
                       },
                     ),
+                  if (widget.onCreate != null)
+                    _MenuItem(
+                      option: LcOption<T>(widget.value, widget.createLabel ?? 'Criar…', leading: '+'),
+                      selected: false,
+                      onTap: () {
+                        _toggle();
+                        widget.onCreate!();
+                      },
+                    ),
                 ],
               ),
             ),
@@ -591,10 +616,14 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
 
 /// A lista de opções numa folha (celular). Com muitas opções, ganha uma busca.
 class _SelectSheet<T> extends StatefulWidget {
-  const _SelectSheet({required this.title, required this.options, required this.value});
+  const _SelectSheet({required this.title, required this.options, required this.value, this.createLabel});
   final String? title;
   final List<LcOption<T>> options;
   final T value;
+  final String? createLabel;
+
+  /// Devolvido quando toca em "+ Criar…".
+  static const create = #create;
 
   @override
   State<_SelectSheet<T>> createState() => _SelectSheetState<T>();
@@ -694,6 +723,25 @@ class _SelectSheetState<T> extends State<_SelectSheet<T>> {
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text('Nada encontrado', style: TextStyle(color: p.pencil)),
+                    ),
+                  if (widget.createLabel != null)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => Navigator.pop(context, _SelectSheet.create),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 28, child: Icon(LucideIcons.plus, size: 18, color: p.accent)),
+                            const SizedBox(width: 6),
+                            Text(
+                              widget.createLabel!,
+                              style: TextStyle(fontSize: 15.5, color: p.accent, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                 ],
               ),
