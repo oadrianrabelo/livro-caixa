@@ -36,4 +36,13 @@ int? parseBRL(String input) {
 }
 
 /// Centavos -> texto editável num campo ("1234,56")
-String centsToInput(int cents) => (cents / 100).toStringAsFixed(2).replaceFirst('.', ',');
+String centsToInput(int cents) {
+  final s = cents.abs().toString().padLeft(3, '0');
+  final intPart = s.substring(0, s.length - 2);
+  final buf = StringBuffer();
+  for (var i = 0; i < intPart.length; i++) {
+    if (i > 0 && (intPart.length - i) % 3 == 0) buf.write('.');
+    buf.write(intPart[i]);
+  }
+  return '${cents < 0 ? '-' : ''}$buf,${s.substring(s.length - 2)}';
+}

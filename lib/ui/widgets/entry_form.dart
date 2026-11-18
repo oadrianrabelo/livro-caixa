@@ -43,7 +43,11 @@ Future<String?> showEntryForm(
   final saved = await db.getEntry(savedId);
   if (saved == null || saved.type != EntryType.receita || !context.mounted) return savedId;
 
-  if (saved.titheStatus == TitheStatus.pendente && (before == null || before.titheStatus != TitheStatus.pendente)) {
+  // Só pergunta do dízimo quando o dinheiro já caiu ("Já recebido"); entrada
+  // futura pergunta no dia em que for marcada com ✓.
+  if (saved.paid &&
+      saved.titheStatus == TitheStatus.pendente &&
+      (before == null || before.titheStatus != TitheStatus.pendente || !before.paid)) {
     await showTitheDialog(context, incomes: [saved]);
   } else if (before != null && saved.titheStatus == TitheStatus.separado && saved.amount != before.amount) {
     final diff = saved.amount - before.amount;

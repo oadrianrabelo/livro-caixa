@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/money.dart';
 import '../theme/paper.dart';
 
 export 'package:lucide_icons_flutter/lucide_icons.dart' show LucideIcons;
@@ -226,6 +227,36 @@ InputDecoration lcInputDecoration(
   );
 }
 
+/// Dinheiro como nos bancos: digita só os números e a vírgula entra sozinha
+/// (1 → 0,01 · 12 → 0,12 · 1234 → 12,34 · 123456 → 1.234,56).
+/// Com [signed], um "-" em qualquer lugar deixa o valor negativo.
+class CentsInputFormatter extends TextInputFormatter {
+  const CentsInputFormatter({this.signed = false});
+  final bool signed;
+
+  static String format(int cents) => centsToInput(cents);
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final negative = signed && newValue.text.contains('-');
+    if (digits.isEmpty || int.parse(digits) == 0) {
+      final t = negative ? '-' : '';
+      return TextEditingValue(
+        text: t,
+        selection: TextSelection.collapsed(offset: t.length),
+      );
+    }
+    // Limite de segurança: até R$ 99 bilhões.
+    final cents = int.parse(digits.length > 13 ? digits.substring(digits.length - 13) : digits);
+    final text = format(negative ? -cents : cents);
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
 class LcField extends StatefulWidget {
   const LcField({
     super.key,
@@ -267,6 +298,9 @@ class _LcFieldState extends State<LcField> {
 
   bool get _numeric => widget.keyboardType?.index == TextInputType.number.index;
   bool get _decimal => _numeric && (widget.keyboardType?.decimal ?? false);
+
+  /// Campo de dinheiro (R$): vírgula automática.
+  bool get _cents => _decimal && (widget.prefix?.trim() == r'R$' || widget.money);
 
   /// No celular, o teclado só sobe depois que a folha terminou de abrir:
   /// as duas animações juntas é que davam a "travadinha".
@@ -340,7 +374,8 @@ class _LcFieldState extends State<LcField> {
           focusNode: _focus,
           autofocus: widget.autofocus && !_deferAutofocus,
           obscureText: widget.obscure,
-          keyboardType: widget.keyboardType,
+          // Dinheiro: só o teclado de números (sem vírgula para procurar).
+          keyboardType: _cents && !signed ? TextInputType.number : widget.keyboardType,
           onChanged: widget.onChanged,
           onSubmitted: widget.onSubmitted,
           // Sem ação própria, o "Enter" do teclado pula para o próximo campo.
@@ -350,7 +385,9 @@ class _LcFieldState extends State<LcField> {
               : TextCapitalization.none,
           // Campos de número só aceitam número (e vírgula, nos de dinheiro).
           inputFormatters: [
-            if (_decimal)
+            if (_cents)
+              CentsInputFormatter(signed: signed)
+            else if (_decimal)
               FilteringTextInputFormatter.allow(RegExp(signed ? r'[0-9.,\-]' : r'[0-9.,]'))
             else if (_numeric)
               FilteringTextInputFormatter.digitsOnly,
