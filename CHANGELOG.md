@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.12.0...v0.13.0) (2026-11-18)
+
+
+### ✨ Novas Funcionalidades
+
+* página do mês mais clara, vírgula automática e categoria na hora ([#33](https://github.com/oadrianrabelo/livro-caixa/issues/33)) ([ebec9e9](https://github.com/oadrianrabelo/livro-caixa/commit/ebec9e980281435c8d386c53f5e3426fd8307ef1))
+
 ## [0.12.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.11.2...v0.12.0) (2026-11-17)
 
 
