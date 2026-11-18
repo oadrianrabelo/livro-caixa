@@ -90,7 +90,17 @@ Carteira → toque na conta → **Editar** → **Saldo atual**: ponha o que o ba
 
 Ajustes → Categorias → toque numa categoria de gasto → **Limite por mês**. Em Ano → **Orçamento do mês** aparece uma barra por categoria (verde, laranja perto do limite, vermelha se passou). Ao lançar um gasto numa categoria com limite, o formulário já mostra quanto resta.
 
+## Lendo a página do mês
+
+- No topo: **Nas contas agora** (o dinheiro que existe hoje, sem vale e cartão) e **O mês vai sobrar/faltar** (a conta do mês inteiro, contando o que ainda vai entrar).
+- **Entradas**: o que já caiu fica à caneta; entrada fixa que ainda não caiu fica a lápis, com "cai dia X". Quando cair, toque no ○: vira ✓ e o app já oferece separar o dízimo (antes disso, não pede).
+- **Disponível** é o que sobra das entradas depois do dízimo e da oferta, **antes dos gastos**. Não é o que tem na conta.
+- Depois dos gastos vem **Sobrou/Faltou** e **Ainda a pagar**. O **vale** fica por último, à parte, porque não entra na conta.
+
 ## Pequenas ajudas
+
+- **Nova categoria na hora**: no lançamento, abra Categoria → **Nova categoria…** no fim da lista; ela já volta escolhida.
+- **Valores sem vírgula**: nos campos de dinheiro é só digitar os números, como nos bancos: 1234 vira 12,34.
 
 - **Excluiu sem querer?** Aparece "Desfazer" por alguns segundos.
 - **Duplicar**: ao editar um lançamento, o ícone de copiar abre um igual, com a data de hoje.

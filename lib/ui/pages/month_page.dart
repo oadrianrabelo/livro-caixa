@@ -207,7 +207,14 @@ class _MonthSheet extends StatelessWidget {
           () =>
               monthSummary(data.entries, data.categories, month, valeAccounts: data.valeAccountIds, cards: data.cards),
         );
-        final pending = data.memo(('pendingTithe', month), () => pendingTithe(data.entries, month: month));
+        // Só pede o dízimo do que já caiu (entrada fixa ainda não recebida espera o ✓).
+        final pending = data.memo(
+          ('pendingTithe', month),
+          () => [
+            for (final e in pendingTithe(data.entries, month: month))
+              if (e.paid || e.recurringId == null) e,
+          ],
+        );
         return LayoutBuilder(
           builder: (context, c) {
             final left = _incomeBlock(context, s, pending);
@@ -258,8 +265,34 @@ class _MonthSheet extends StatelessWidget {
     final data = scope.data;
     final pendingTotal = pending.fold(0, (sum, e) => sum + e.amount);
 
+    // Dinheiro de verdade nas contas agora (sem vale e cartão).
+    final cash = data.memo(
+      #cashNow,
+      () => [
+        for (final a in data.accounts)
+          if (!a.archived && a.type != AccountType.vale && a.type != AccountType.cartao)
+            accountBalance(a, data.entries),
+      ].fold(0, (x, y) => x + y),
+    );
+    final received = [
+      for (final e in s.incomes)
+        if (e.paid || e.recurringId == null) e,
+    ];
+    final toReceive = [
+      for (final e in s.incomes)
+        if (!e.paid && e.recurringId != null) e,
+    ];
+
     return [
       LedgerHeading(monthLabel(month).split(' de ').first, big: true),
+      // Resumo para ler de relance: o que há agora e como o mês fecha.
+      if (month == monthOf(today()))
+        LedgerRow(label: 'Nas contas agora', value: cash, color: cash < 0 ? p.redInk : p.pencil),
+      LedgerRow(
+        label: s.left >= 0 ? 'O mês vai sobrar' : 'O mês vai faltar',
+        value: s.left.abs(),
+        color: s.left >= 0 ? p.greenInk : p.redInk,
+      ),
       LedgerHeading(
         'Entradas',
         trailing: LcIconButton(
@@ -269,7 +302,7 @@ class _MonthSheet extends StatelessWidget {
         ),
       ),
       if (s.incomes.isEmpty) LedgerRow(label: 'Nenhuma entrada ainda', color: p.pencil),
-      for (final e in s.incomes)
+      for (final e in received)
         LedgerRow(
           label: data.labelOf(e),
           value: e.amount,
@@ -280,6 +313,23 @@ class _MonthSheet extends StatelessWidget {
             TitheStatus.isento => 'sem dízimo',
             _ => null,
           },
+          onTap: () => showEntryForm(context, editing: e),
+        ),
+      // Ainda não caiu: a lápis. Ao marcar ✓ (caiu), já oferece separar o dízimo.
+      for (final e in toReceive)
+        LedgerRow(
+          label: data.labelOf(e),
+          value: e.amount,
+          color: p.pencil,
+          checked: false,
+          onCheck: () async {
+            await scope.db.setPaid(e.id, true);
+            if (e.titheStatus == TitheStatus.pendente && context.mounted) {
+              final fresh = await scope.db.getEntry(e.id);
+              if (fresh != null && context.mounted) await showTitheDialog(context, incomes: [fresh]);
+            }
+          },
+          note: 'cai dia ${e.date.substring(8)}',
           onTap: () => showEntryForm(context, editing: e),
         ),
       if (pending.isNotEmpty)
@@ -302,7 +352,7 @@ class _MonthSheet extends StatelessWidget {
           ),
         ),
       const LedgerGap(),
-      if (s.tithes.isEmpty && s.income > 0) LedgerRow(label: 'Dízimo', note: 'não separado', color: p.pencil),
+      if (s.tithes.isEmpty && received.isNotEmpty) LedgerRow(label: 'Dízimo', note: 'não separado', color: p.pencil),
       for (final e in [...s.tithes, ...s.offerings])
         LedgerRow(
           label: e.categoryId == dizimoCategoryId ? 'Dízimo' : 'Oferta',
@@ -313,7 +363,7 @@ class _MonthSheet extends StatelessWidget {
           onCheck: () => scope.db.setPaid(e.id, !e.paid),
           onTap: () => showEntryForm(context, editing: e),
         ),
-      LedgerRow(label: 'Disponível', value: s.available, color: p.redInk, bold: true),
+      LedgerRow(label: 'Disponível', note: 'antes dos gastos', value: s.available, color: p.redInk, bold: true),
     ];
   }
 
@@ -372,7 +422,6 @@ class _MonthSheet extends StatelessWidget {
             onTap: () => showEntryForm(context, editing: e),
           ),
       ],
-      ..._valeBlock(context, s),
       const LedgerGap(),
       LedgerRow(
         label: s.left >= 0 ? 'Sobrou' : 'Faltou',
@@ -400,6 +449,8 @@ class _MonthSheet extends StatelessWidget {
           ),
         ),
       if (s.unpaid > 0) LedgerRow(label: 'Ainda a pagar', value: s.unpaid, color: p.pencil),
+      // O vale fica por último e à parte: não entra na conta do mês.
+      if (_valeBlock(context, s).isNotEmpty) ...[const LedgerGap(), ..._valeBlock(context, s)],
     ];
   }
 }

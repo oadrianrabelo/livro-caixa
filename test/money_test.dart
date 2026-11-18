@@ -22,5 +22,10 @@ void main() {
     }
   });
 
-  test('centsToInput', () => expect(centsToInput(123456), '1234,56'));
+  test('centsToInput', () {
+    expect(centsToInput(123456), '1.234,56');
+    expect(centsToInput(5), '0,05');
+    expect(centsToInput(-10000), '-100,00');
+    expect(parseBRL(centsToInput(123456789)), 123456789);
+  });
 }

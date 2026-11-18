@@ -11,6 +11,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../core/money.dart';
 import '../theme/paper.dart';
 
 export 'package:lucide_icons_flutter/lucide_icons.dart' show LucideIcons;
@@ -226,6 +227,36 @@ InputDecoration lcInputDecoration(
   );
 }
 
+/// Dinheiro como nos bancos: digita só os números e a vírgula entra sozinha
+/// (1 → 0,01 · 12 → 0,12 · 1234 → 12,34 · 123456 → 1.234,56).
+/// Com [signed], um "-" em qualquer lugar deixa o valor negativo.
+class CentsInputFormatter extends TextInputFormatter {
+  const CentsInputFormatter({this.signed = false});
+  final bool signed;
+
+  static String format(int cents) => centsToInput(cents);
+
+  @override
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    final negative = signed && newValue.text.contains('-');
+    if (digits.isEmpty || int.parse(digits) == 0) {
+      final t = negative ? '-' : '';
+      return TextEditingValue(
+        text: t,
+        selection: TextSelection.collapsed(offset: t.length),
+      );
+    }
+    // Limite de segurança: até R$ 99 bilhões.
+    final cents = int.parse(digits.length > 13 ? digits.substring(digits.length - 13) : digits);
+    final text = format(negative ? -cents : cents);
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
+    );
+  }
+}
+
 class LcField extends StatefulWidget {
   const LcField({
     super.key,
@@ -267,6 +298,9 @@ class _LcFieldState extends State<LcField> {
 
   bool get _numeric => widget.keyboardType?.index == TextInputType.number.index;
   bool get _decimal => _numeric && (widget.keyboardType?.decimal ?? false);
+
+  /// Campo de dinheiro (R$): vírgula automática.
+  bool get _cents => _decimal && (widget.prefix?.trim() == r'R$' || widget.money);
 
   /// No celular, o teclado só sobe depois que a folha terminou de abrir:
   /// as duas animações juntas é que davam a "travadinha".
@@ -340,7 +374,8 @@ class _LcFieldState extends State<LcField> {
           focusNode: _focus,
           autofocus: widget.autofocus && !_deferAutofocus,
           obscureText: widget.obscure,
-          keyboardType: widget.keyboardType,
+          // Dinheiro: só o teclado de números (sem vírgula para procurar).
+          keyboardType: _cents && !signed ? TextInputType.number : widget.keyboardType,
           onChanged: widget.onChanged,
           onSubmitted: widget.onSubmitted,
           // Sem ação própria, o "Enter" do teclado pula para o próximo campo.
@@ -350,7 +385,9 @@ class _LcFieldState extends State<LcField> {
               : TextCapitalization.none,
           // Campos de número só aceitam número (e vírgula, nos de dinheiro).
           inputFormatters: [
-            if (_decimal)
+            if (_cents)
+              CentsInputFormatter(signed: signed)
+            else if (_decimal)
               FilteringTextInputFormatter.allow(RegExp(signed ? r'[0-9.,\-]' : r'[0-9.,]'))
             else if (_numeric)
               FilteringTextInputFormatter.digitsOnly,
@@ -395,12 +432,18 @@ class LcSelect<T> extends StatefulWidget {
     required this.options,
     required this.onChanged,
     this.placeholder = 'Escolher…',
+    this.createLabel,
+    this.onCreate,
   });
   final String? label;
   final T value;
   final List<LcOption<T>> options;
   final ValueChanged<T> onChanged;
   final String placeholder;
+
+  /// Última linha da lista ("+ Nova categoria…"): cria uma opção na hora.
+  final String? createLabel;
+  final VoidCallback? onCreate;
 
   @override
   State<LcSelect<T>> createState() => _LcSelectState<T>();
@@ -415,7 +458,8 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
   bool _up = false; // abre para cima quando falta espaço embaixo
   double _maxH = 300;
 
-  double get _itemsHeight => widget.options.fold(8.0, (h, o) => h + (o.subtitle == null ? 36 : 46));
+  double get _itemsHeight =>
+      widget.options.fold(8.0, (h, o) => h + (o.subtitle == null ? 36 : 46)) + (widget.onCreate == null ? 0 : 36);
 
   void _toggle() {
     hideKeyboard();
@@ -443,11 +487,20 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
   }
 
   Future<void> _openSheet() async {
-    final picked = await showLcSheet<LcOption<T>>(
+    final picked = await showLcSheet<Object>(
       context,
-      builder: (_) => _SelectSheet<T>(title: widget.label, options: widget.options, value: widget.value),
+      builder: (_) => _SelectSheet<T>(
+        title: widget.label,
+        options: widget.options,
+        value: widget.value,
+        createLabel: widget.onCreate == null ? null : (widget.createLabel ?? 'Criar…'),
+      ),
     );
-    if (picked != null) widget.onChanged(picked.value);
+    if (picked == _SelectSheet.create) {
+      widget.onCreate?.call();
+    } else if (picked is LcOption<T>) {
+      widget.onChanged(picked.value);
+    }
   }
 
   @override
@@ -542,6 +595,15 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
                         widget.onChanged(o.value);
                       },
                     ),
+                  if (widget.onCreate != null)
+                    _MenuItem(
+                      option: LcOption<T>(widget.value, widget.createLabel ?? 'Criar…', leading: '+'),
+                      selected: false,
+                      onTap: () {
+                        _toggle();
+                        widget.onCreate!();
+                      },
+                    ),
                 ],
               ),
             ),
@@ -554,10 +616,14 @@ class _LcSelectState<T> extends State<LcSelect<T>> {
 
 /// A lista de opções numa folha (celular). Com muitas opções, ganha uma busca.
 class _SelectSheet<T> extends StatefulWidget {
-  const _SelectSheet({required this.title, required this.options, required this.value});
+  const _SelectSheet({required this.title, required this.options, required this.value, this.createLabel});
   final String? title;
   final List<LcOption<T>> options;
   final T value;
+  final String? createLabel;
+
+  /// Devolvido quando toca em "+ Criar…".
+  static const create = #create;
 
   @override
   State<_SelectSheet<T>> createState() => _SelectSheetState<T>();
@@ -657,6 +723,25 @@ class _SelectSheetState<T> extends State<_SelectSheet<T>> {
                     Padding(
                       padding: const EdgeInsets.all(16),
                       child: Text('Nada encontrado', style: TextStyle(color: p.pencil)),
+                    ),
+                  if (widget.createLabel != null)
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => Navigator.pop(context, _SelectSheet.create),
+                      child: Container(
+                        constraints: const BoxConstraints(minHeight: 48),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 28, child: Icon(LucideIcons.plus, size: 18, color: p.accent)),
+                            const SizedBox(width: 6),
+                            Text(
+                              widget.createLabel!,
+                              style: TextStyle(fontSize: 15.5, color: p.accent, fontWeight: FontWeight.w600),
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                 ],
               ),

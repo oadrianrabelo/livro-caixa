@@ -7,6 +7,7 @@ import '../../data/database.dart';
 import '../../domain/cards.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
+import 'editors.dart';
 import 'kbd.dart' show isDesktop;
 import 'tithe_dialog.dart';
 
@@ -43,7 +44,11 @@ Future<String?> showEntryForm(
   final saved = await db.getEntry(savedId);
   if (saved == null || saved.type != EntryType.receita || !context.mounted) return savedId;
 
-  if (saved.titheStatus == TitheStatus.pendente && (before == null || before.titheStatus != TitheStatus.pendente)) {
+  // Só pergunta do dízimo quando o dinheiro já caiu ("Já recebido"); entrada
+  // futura pergunta no dia em que for marcada com ✓.
+  if (saved.paid &&
+      saved.titheStatus == TitheStatus.pendente &&
+      (before == null || before.titheStatus != TitheStatus.pendente || !before.paid)) {
     await showTitheDialog(context, incomes: [saved]);
   } else if (before != null && saved.titheStatus == TitheStatus.separado && saved.amount != before.amount) {
     final diff = saved.amount - before.amount;
@@ -456,6 +461,12 @@ class _EntryFormState extends State<EntryForm> {
                 for (final c in categories) LcOption(c.id, c.name, leading: c.icon),
               ],
               onChanged: (v) => setState(() => _categoryId = v),
+              // Não achou a categoria? Cria na hora, e ela já fica escolhida.
+              createLabel: 'Nova categoria…',
+              onCreate: () async {
+                final id = await showCategoryEditor(context, kind: kind);
+                if (id != null && mounted) setState(() => _categoryId = id);
+              },
             ),
           if (!transfer && _type == EntryType.despesa) ?_budgetNote(data, note),
           if (onVale) note('Pago com o vale-alimentação: não sai do Disponível.', icon: LucideIcons.utensils),
