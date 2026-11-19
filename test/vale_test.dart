@@ -1,3 +1,4 @@
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:livro_caixa/core/holidays.dart';
 import 'package:livro_caixa/data/database.dart';
@@ -5,9 +6,11 @@ import 'package:livro_caixa/domain/finance.dart';
 import 'package:livro_caixa/domain/vale.dart';
 
 void main() {
-  const vale = Account(
+  // Saldo acertado em 01/10/2026 (zero): acumula as renovações de 20/10 e 19/11 (feriado no 20).
+  final vale = Account(
     id: 'va',
     createdAt: 0,
+    balanceDate: '2026-10-01',
     updatedAt: 0,
     name: 'Vale',
     type: AccountType.vale,
@@ -39,8 +42,9 @@ void main() {
     // 20/11 é feriado e 20/12 é domingo: renova nos dias úteis anteriores.
     expect(s.periodStart, DateTime(2026, 11, 19));
     expect(s.nextRenewal, DateTime(2026, 12, 18));
-    expect(s.spent, 20000);
-    expect(s.left, 40000);
+    expect(s.spent, 20000); // gasto só no período atual
+    // Acumula: 2 renovações (120.000) − todas as compras até hoje (30.000).
+    expect(s.left, 90000);
     expect(s.daysUntilRenewal(DateTime(2026, 12, 5)), 13);
 
     // Antes do dia 20: período começou no mês anterior.
@@ -65,7 +69,7 @@ void main() {
     final s = valeStatus(vale, [buy('2026-11-19', 7000), buy('2026-11-18', 9000)], DateTime(2026, 11, 19));
     expect(s.periodStart, DateTime(2026, 11, 19));
     expect(s.spent, 7000); // o do dia 18 ficou no período anterior
-    expect(s.left, 53000);
+    expect(s.left, 120000 - 16000); // o que sobrou de outubro continua lá
     // 20/12/2026 é domingo: próxima renovação na sexta, 18/12.
     expect(s.nextRenewal, DateTime(2026, 12, 18));
     // Na véspera (18/11), ainda é o período antigo.
@@ -96,9 +100,22 @@ void main() {
       paid: true,
     );
     final st = valeStatus(vale, [buy('2026-11-21', 10000), refund], DateTime(2026, 11, 26));
-    expect(st.left, 60000 - 10000 + 2500);
+    expect(st.left, 120000 - 10000 + 2500);
     final s = monthSummary([refund], const [], '2026-11', valeAccounts: {'va'});
     expect(s.income, 0);
     expect(s.valeIn.single.id, 'r');
+  });
+
+  test('saldo de partida: acertado hoje, segue somando as renovações', () {
+    // "Tem R$ 1.500 hoje" (19/11, já renovado): acerto marcado para hoje.
+    final v = vale.copyWith(initialBalance: 150000, balanceDate: const Value('2026-11-19'));
+    expect(valeStatus(v, const [], DateTime(2026, 11, 19)).left, 150000);
+    // Em 18/12 (renovação antecipada) entra mais um mês.
+    expect(valeStatus(v, const [], DateTime(2026, 12, 18)).left, 210000);
+    expect(valeStatus(v, const [], DateTime(2026, 12, 17)).left, 150000);
+
+    // Conta antiga, sem acerto: continua zerando a cada renovação.
+    final old = vale.copyWith(balanceDate: const Value(null));
+    expect(valeStatus(old, [buy('2026-11-25', 1000)], DateTime(2026, 11, 26)).left, 59000);
   });
 }

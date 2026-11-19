@@ -117,6 +117,17 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     type: DriftSqlType.int,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _balanceDateMeta = const VerificationMeta(
+    'balanceDate',
+  );
+  @override
+  late final GeneratedColumn<String> balanceDate = GeneratedColumn<String>(
+    'balance_date',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _closingDayMeta = const VerificationMeta(
     'closingDay',
   );
@@ -149,6 +160,7 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
     archived,
     renewDay,
     renewAmount,
+    balanceDate,
     closingDay,
     dueDay,
   ];
@@ -229,6 +241,15 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         ),
       );
     }
+    if (data.containsKey('balance_date')) {
+      context.handle(
+        _balanceDateMeta,
+        balanceDate.isAcceptableOrUnknown(
+          data['balance_date']!,
+          _balanceDateMeta,
+        ),
+      );
+    }
     if (data.containsKey('closing_day')) {
       context.handle(
         _closingDayMeta,
@@ -292,6 +313,10 @@ class $AccountsTable extends Accounts with TableInfo<$AccountsTable, Account> {
         DriftSqlType.int,
         data['${effectivePrefix}renew_amount'],
       ),
+      balanceDate: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}balance_date'],
+      ),
       closingDay: attachedDatabase.typeMapping.read(
         DriftSqlType.int,
         data['${effectivePrefix}closing_day'],
@@ -323,6 +348,7 @@ class Account extends DataClass implements Insertable<Account> {
   final bool archived;
   final int? renewDay;
   final int? renewAmount;
+  final String? balanceDate;
   final int? closingDay;
   final int? dueDay;
   const Account({
@@ -336,6 +362,7 @@ class Account extends DataClass implements Insertable<Account> {
     required this.archived,
     this.renewDay,
     this.renewAmount,
+    this.balanceDate,
     this.closingDay,
     this.dueDay,
   });
@@ -359,6 +386,9 @@ class Account extends DataClass implements Insertable<Account> {
     }
     if (!nullToAbsent || renewAmount != null) {
       map['renew_amount'] = Variable<int>(renewAmount);
+    }
+    if (!nullToAbsent || balanceDate != null) {
+      map['balance_date'] = Variable<String>(balanceDate);
     }
     if (!nullToAbsent || closingDay != null) {
       map['closing_day'] = Variable<int>(closingDay);
@@ -387,6 +417,9 @@ class Account extends DataClass implements Insertable<Account> {
       renewAmount: renewAmount == null && nullToAbsent
           ? const Value.absent()
           : Value(renewAmount),
+      balanceDate: balanceDate == null && nullToAbsent
+          ? const Value.absent()
+          : Value(balanceDate),
       closingDay: closingDay == null && nullToAbsent
           ? const Value.absent()
           : Value(closingDay),
@@ -414,6 +447,7 @@ class Account extends DataClass implements Insertable<Account> {
       archived: serializer.fromJson<bool>(json['archived']),
       renewDay: serializer.fromJson<int?>(json['renewDay']),
       renewAmount: serializer.fromJson<int?>(json['renewAmount']),
+      balanceDate: serializer.fromJson<String?>(json['balanceDate']),
       closingDay: serializer.fromJson<int?>(json['closingDay']),
       dueDay: serializer.fromJson<int?>(json['dueDay']),
     );
@@ -434,6 +468,7 @@ class Account extends DataClass implements Insertable<Account> {
       'archived': serializer.toJson<bool>(archived),
       'renewDay': serializer.toJson<int?>(renewDay),
       'renewAmount': serializer.toJson<int?>(renewAmount),
+      'balanceDate': serializer.toJson<String?>(balanceDate),
       'closingDay': serializer.toJson<int?>(closingDay),
       'dueDay': serializer.toJson<int?>(dueDay),
     };
@@ -450,6 +485,7 @@ class Account extends DataClass implements Insertable<Account> {
     bool? archived,
     Value<int?> renewDay = const Value.absent(),
     Value<int?> renewAmount = const Value.absent(),
+    Value<String?> balanceDate = const Value.absent(),
     Value<int?> closingDay = const Value.absent(),
     Value<int?> dueDay = const Value.absent(),
   }) => Account(
@@ -463,6 +499,7 @@ class Account extends DataClass implements Insertable<Account> {
     archived: archived ?? this.archived,
     renewDay: renewDay.present ? renewDay.value : this.renewDay,
     renewAmount: renewAmount.present ? renewAmount.value : this.renewAmount,
+    balanceDate: balanceDate.present ? balanceDate.value : this.balanceDate,
     closingDay: closingDay.present ? closingDay.value : this.closingDay,
     dueDay: dueDay.present ? dueDay.value : this.dueDay,
   );
@@ -482,6 +519,9 @@ class Account extends DataClass implements Insertable<Account> {
       renewAmount: data.renewAmount.present
           ? data.renewAmount.value
           : this.renewAmount,
+      balanceDate: data.balanceDate.present
+          ? data.balanceDate.value
+          : this.balanceDate,
       closingDay: data.closingDay.present
           ? data.closingDay.value
           : this.closingDay,
@@ -502,6 +542,7 @@ class Account extends DataClass implements Insertable<Account> {
           ..write('archived: $archived, ')
           ..write('renewDay: $renewDay, ')
           ..write('renewAmount: $renewAmount, ')
+          ..write('balanceDate: $balanceDate, ')
           ..write('closingDay: $closingDay, ')
           ..write('dueDay: $dueDay')
           ..write(')'))
@@ -520,6 +561,7 @@ class Account extends DataClass implements Insertable<Account> {
     archived,
     renewDay,
     renewAmount,
+    balanceDate,
     closingDay,
     dueDay,
   );
@@ -537,6 +579,7 @@ class Account extends DataClass implements Insertable<Account> {
           other.archived == this.archived &&
           other.renewDay == this.renewDay &&
           other.renewAmount == this.renewAmount &&
+          other.balanceDate == this.balanceDate &&
           other.closingDay == this.closingDay &&
           other.dueDay == this.dueDay);
 }
@@ -552,6 +595,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
   final Value<bool> archived;
   final Value<int?> renewDay;
   final Value<int?> renewAmount;
+  final Value<String?> balanceDate;
   final Value<int?> closingDay;
   final Value<int?> dueDay;
   final Value<int> rowid;
@@ -566,6 +610,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.archived = const Value.absent(),
     this.renewDay = const Value.absent(),
     this.renewAmount = const Value.absent(),
+    this.balanceDate = const Value.absent(),
     this.closingDay = const Value.absent(),
     this.dueDay = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -581,6 +626,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     this.archived = const Value.absent(),
     this.renewDay = const Value.absent(),
     this.renewAmount = const Value.absent(),
+    this.balanceDate = const Value.absent(),
     this.closingDay = const Value.absent(),
     this.dueDay = const Value.absent(),
     this.rowid = const Value.absent(),
@@ -600,6 +646,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Expression<bool>? archived,
     Expression<int>? renewDay,
     Expression<int>? renewAmount,
+    Expression<String>? balanceDate,
     Expression<int>? closingDay,
     Expression<int>? dueDay,
     Expression<int>? rowid,
@@ -615,6 +662,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       if (archived != null) 'archived': archived,
       if (renewDay != null) 'renew_day': renewDay,
       if (renewAmount != null) 'renew_amount': renewAmount,
+      if (balanceDate != null) 'balance_date': balanceDate,
       if (closingDay != null) 'closing_day': closingDay,
       if (dueDay != null) 'due_day': dueDay,
       if (rowid != null) 'rowid': rowid,
@@ -632,6 +680,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     Value<bool>? archived,
     Value<int?>? renewDay,
     Value<int?>? renewAmount,
+    Value<String?>? balanceDate,
     Value<int?>? closingDay,
     Value<int?>? dueDay,
     Value<int>? rowid,
@@ -647,6 +696,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
       archived: archived ?? this.archived,
       renewDay: renewDay ?? this.renewDay,
       renewAmount: renewAmount ?? this.renewAmount,
+      balanceDate: balanceDate ?? this.balanceDate,
       closingDay: closingDay ?? this.closingDay,
       dueDay: dueDay ?? this.dueDay,
       rowid: rowid ?? this.rowid,
@@ -688,6 +738,9 @@ class AccountsCompanion extends UpdateCompanion<Account> {
     if (renewAmount.present) {
       map['renew_amount'] = Variable<int>(renewAmount.value);
     }
+    if (balanceDate.present) {
+      map['balance_date'] = Variable<String>(balanceDate.value);
+    }
     if (closingDay.present) {
       map['closing_day'] = Variable<int>(closingDay.value);
     }
@@ -713,6 +766,7 @@ class AccountsCompanion extends UpdateCompanion<Account> {
           ..write('archived: $archived, ')
           ..write('renewDay: $renewDay, ')
           ..write('renewAmount: $renewAmount, ')
+          ..write('balanceDate: $balanceDate, ')
           ..write('closingDay: $closingDay, ')
           ..write('dueDay: $dueDay, ')
           ..write('rowid: $rowid')
@@ -6409,6 +6463,7 @@ typedef $$AccountsTableCreateCompanionBuilder = AccountsCompanion Function({
   Value<bool> archived,
   Value<int?> renewDay,
   Value<int?> renewAmount,
+  Value<String?> balanceDate,
   Value<int?> closingDay,
   Value<int?> dueDay,
   Value<int> rowid,
@@ -6424,6 +6479,7 @@ typedef $$AccountsTableUpdateCompanionBuilder = AccountsCompanion Function({
   Value<bool> archived,
   Value<int?> renewDay,
   Value<int?> renewAmount,
+  Value<String?> balanceDate,
   Value<int?> closingDay,
   Value<int?> dueDay,
   Value<int> rowid,
@@ -6486,6 +6542,11 @@ class $$AccountsTableFilterComposer
 
   ColumnFilters<int> get renewAmount => $composableBuilder(
     column: $table.renewAmount,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get balanceDate => $composableBuilder(
+    column: $table.balanceDate,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -6559,6 +6620,11 @@ class $$AccountsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get balanceDate => $composableBuilder(
+    column: $table.balanceDate,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<int> get closingDay => $composableBuilder(
     column: $table.closingDay,
     builder: (column) => ColumnOrderings(column),
@@ -6613,6 +6679,11 @@ class $$AccountsTableAnnotationComposer
     builder: (column) => column,
   );
 
+  GeneratedColumn<String> get balanceDate => $composableBuilder(
+    column: $table.balanceDate,
+    builder: (column) => column,
+  );
+
   GeneratedColumn<int> get closingDay => $composableBuilder(
     column: $table.closingDay,
     builder: (column) => column,
@@ -6660,6 +6731,7 @@ class $$AccountsTableTableManager
                 Value<bool> archived = const Value.absent(),
                 Value<int?> renewDay = const Value.absent(),
                 Value<int?> renewAmount = const Value.absent(),
+                Value<String?> balanceDate = const Value.absent(),
                 Value<int?> closingDay = const Value.absent(),
                 Value<int?> dueDay = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6674,6 +6746,7 @@ class $$AccountsTableTableManager
                 archived: archived,
                 renewDay: renewDay,
                 renewAmount: renewAmount,
+                balanceDate: balanceDate,
                 closingDay: closingDay,
                 dueDay: dueDay,
                 rowid: rowid,
@@ -6690,6 +6763,7 @@ class $$AccountsTableTableManager
                 Value<bool> archived = const Value.absent(),
                 Value<int?> renewDay = const Value.absent(),
                 Value<int?> renewAmount = const Value.absent(),
+                Value<String?> balanceDate = const Value.absent(),
                 Value<int?> closingDay = const Value.absent(),
                 Value<int?> dueDay = const Value.absent(),
                 Value<int> rowid = const Value.absent(),
@@ -6704,6 +6778,7 @@ class $$AccountsTableTableManager
                 archived: archived,
                 renewDay: renewDay,
                 renewAmount: renewAmount,
+                balanceDate: balanceDate,
                 closingDay: closingDay,
                 dueDay: dueDay,
                 rowid: rowid,
