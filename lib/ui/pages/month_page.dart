@@ -156,7 +156,7 @@ List<Widget> _valeBlock(BuildContext context, MonthSummary s) {
             ),
             text:
                 '${v.name}: restam ${formatBRL(st.left)}\n'
-                'renova dia ${v.renewDay} (${days == 0
+                'renova dia ${st.nextRenewal.day} (${days == 0
                     ? 'hoje'
                     : days == 1
                     ? 'amanhã'

@@ -13,6 +13,7 @@ import '../core/dates.dart';
 import '../core/money.dart';
 import '../data/app_data.dart';
 import '../data/database.dart';
+import '../domain/vale.dart';
 import '../data/prefs.dart';
 import '../domain/finance.dart';
 import '../domain/tithe.dart';
@@ -105,9 +106,8 @@ class PhoneExtras {
         await at(due, 9, 'Vence hoje', '$label · ${formatBRL(e.amount)}');
       }
       for (final v in _data.accounts.where((a) => a.type == AccountType.vale && !a.archived)) {
-        final d = v.renewDay ?? 20;
-        final n = DateTime.now();
-        final next = n.day < d ? DateTime(n.year, n.month, d) : DateTime(n.year, n.month + 1, d);
+        // Mesma data que o app mostra (antecipada se cair em fim de semana ou feriado).
+        final next = valeStatus(v, const [], DateTime.now()).nextRenewal;
         await at(next, 9, 'O vale renova hoje', '${v.name}: ${formatBRL(v.renewAmount ?? 0)} de novo.');
       }
       final pending = pendingTithe(_data.entries);
