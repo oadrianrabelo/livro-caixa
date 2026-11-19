@@ -68,6 +68,8 @@ class Accounts extends Table with SyncColumns {
   BoolColumn get archived => boolean().withDefault(const Constant(false))();
   IntColumn get renewDay => integer().nullable()(); // vale: dia do mês em que renova (1-28)
   IntColumn get renewAmount => integer().nullable()(); // vale: valor que entra a cada renovação
+  TextColumn get balanceDate =>
+      text().nullable()(); // vale: dia (AAAA-MM-DD) em que o saldo foi acertado; dali em diante acumula
   IntColumn get closingDay => integer().nullable()(); // cartão: dia em que a fatura fecha
   IntColumn get dueDay => integer().nullable()(); // cartão: dia em que a fatura vence
 }
@@ -209,7 +211,7 @@ class AppDatabase extends _$AppDatabase {
       );
 
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -267,6 +269,9 @@ class AppDatabase extends _$AppDatabase {
       },
       from5To6: (m, schema) async {
         await m.createTable(schema.planItems);
+      },
+      from6To7: (m, schema) async {
+        await m.addColumn(schema.accounts, schema.accounts.balanceDate);
       },
     ),
   );
@@ -341,6 +346,7 @@ class AppDatabase extends _$AppDatabase {
     int? renewAmount,
     int? closingDay,
     int? dueDay,
+    String? balanceDate,
   }) async {
     final t = now();
     final id = newId();
@@ -356,6 +362,7 @@ class AppDatabase extends _$AppDatabase {
         renewAmount: Value(renewAmount),
         closingDay: Value(closingDay),
         dueDay: Value(dueDay),
+        balanceDate: Value(balanceDate),
       ),
     );
     return id;
@@ -370,8 +377,10 @@ class AppDatabase extends _$AppDatabase {
     int? renewAmount,
     int? closingDay,
     int? dueDay,
+    String? balanceDate,
   }) => (update(accounts)..where((a) => a.id.equals(id))).write(
     AccountsCompanion(
+      balanceDate: balanceDate == null ? const Value.absent() : Value(balanceDate),
       name: Value(name),
       type: Value(type),
       initialBalance: Value(initialBalance),

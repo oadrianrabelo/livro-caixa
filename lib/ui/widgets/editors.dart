@@ -1,10 +1,13 @@
 // Diálogos de edição: categoria, conta e conta fixa.
 import 'package:flutter/material.dart';
+import 'package:drift/drift.dart' show Value;
 
+import '../../core/dates.dart';
 import '../../core/money.dart';
 import '../../data/app_data.dart';
 import '../../data/database.dart';
 import '../../domain/finance.dart';
+import '../../domain/vale.dart';
 import '../kit/kit.dart';
 import '../theme/paper.dart';
 
@@ -290,10 +293,29 @@ class _AccountEditorState extends State<_AccountEditor> {
   bool _loaded = false;
 
   /// O que os lançamentos pagos já mexeram nesta conta.
-  int _movements() {
+  /// Saldo de hoje, como a Carteira mostra.
+  int _currentBalance() {
+    final a = widget.editing!;
+    final entries = AppScope.of(context).data.entries;
+    return a.type == AccountType.vale ? valeStatus(a, entries, DateTime.now()).left : accountBalance(a, entries);
+  }
+
+  /// Saldo de partida que faz a conta mostrar [typed] hoje. Para o vale, com
+  /// os valores do formulário e o acerto marcado para hoje (dali, acumula).
+  int _initialFor(int typed, {int? renewAmount, int? renewDay}) {
     final a = widget.editing;
-    if (a == null) return 0;
-    return accountBalance(a, AppScope.of(context).data.entries) - a.initialBalance;
+    if (a == null) return typed;
+    final entries = AppScope.of(context).data.entries;
+    if (_type == AccountType.vale) {
+      final v = a.copyWith(
+        initialBalance: 0,
+        renewAmount: Value(renewAmount ?? a.renewAmount),
+        renewDay: Value(renewDay ?? a.renewDay),
+        balanceDate: Value(today()),
+      );
+      return typed - valeStatus(v, entries, DateTime.now()).left;
+    }
+    return typed - (accountBalance(a, entries) - a.initialBalance);
   }
 
   @override
@@ -301,7 +323,7 @@ class _AccountEditorState extends State<_AccountEditor> {
     super.didChangeDependencies();
     if (_loaded || widget.editing == null) return;
     _loaded = true;
-    final balance = widget.editing!.initialBalance + _movements();
+    final balance = _currentBalance();
     if (balance != 0) _current.text = centsToInput(balance);
   }
 
@@ -397,9 +419,9 @@ class _AccountEditorState extends State<_AccountEditor> {
     if (name.isEmpty) return;
     final db = AppScope.of(context).db;
     final vale = _type == AccountType.vale;
-    final initial = vale ? 0 : (parseBRL(_current.text) ?? 0) - _movements();
     final renewAmount = vale ? parseBRL(_renewAmount.text) ?? 0 : null;
     final renewDay = vale ? (int.tryParse(_renewDay.text) ?? 20).clamp(1, 28) : null;
+    final initial = _initialFor(parseBRL(_current.text) ?? 0, renewAmount: renewAmount, renewDay: renewDay);
     final card = _type == AccountType.cartao;
     final closing = card ? int.tryParse(_closing.text)?.clamp(1, 28) : null;
     final due = card ? int.tryParse(_due.text)?.clamp(1, 28) : null;
@@ -412,6 +434,7 @@ class _AccountEditorState extends State<_AccountEditor> {
         renewDay: renewDay,
         closingDay: closing,
         dueDay: due,
+        balanceDate: vale ? today() : null,
       );
     } else {
       await db.updateAccount(
@@ -423,6 +446,7 @@ class _AccountEditorState extends State<_AccountEditor> {
         renewDay: renewDay,
         closingDay: closing,
         dueDay: due,
+        balanceDate: vale ? today() : null,
       );
     }
     if (mounted) Navigator.pop(context);
@@ -464,10 +488,19 @@ class _AccountEditorState extends State<_AccountEditor> {
                 ),
               ],
             ),
+            gap,
+            LcField(
+              label: widget.editing == null ? 'Quanto tem no vale hoje' : 'Saldo atual do vale',
+              controller: _current,
+              prefix: r'R$ ',
+              hint: '0,00',
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            ),
             const SizedBox(height: 8),
             Text(
-              'O vale fica fora do Disponível. Lance as compras com ele para ver quanto resta.',
-              style: TextStyle(fontSize: 12.5, color: Paper.of(context).pencil),
+              'O que sobra acumula: a cada renovação o app soma o valor do mês. Ponha o saldo que o app '
+              'do vale mostra hoje. O vale fica fora do Disponível.',
+              style: TextStyle(fontSize: 12.5, color: Paper.of(context).pencil, height: 1.35),
             ),
           ] else if (_type == AccountType.cartao) ...[
             Row(

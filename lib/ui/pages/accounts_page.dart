@@ -87,7 +87,7 @@ class AccountsPage extends StatelessWidget {
                       formatBRL(balance),
                       style: p.mono(14, weight: FontWeight.w600, color: balance < 0 ? p.redInk : p.ink),
                     ),
-                    if (vale) Text('restam', style: TextStyle(fontSize: 11.5, color: p.pencil)),
+                    if (vale) Text('saldo', style: TextStyle(fontSize: 11.5, color: p.pencil)),
                   ],
                 ),
                 const SizedBox(width: 4),

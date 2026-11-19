@@ -228,8 +228,8 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                     if (left != null)
                       Text(
                         total <= left
-                            ? 'No vale: restam ${formatBRL(left)} · sobra ${formatBRL(left - total)}'
-                            : 'Passa ${formatBRL(total - left)} do que resta no vale (${formatBRL(left)})',
+                            ? 'No vale: tem ${formatBRL(left)} · fica ${formatBRL(left - total)}'
+                            : 'Passa ${formatBRL(total - left)} do que tem no vale (${formatBRL(left)})',
                         textAlign: TextAlign.end,
                         style: TextStyle(
                           fontSize: 12.5,

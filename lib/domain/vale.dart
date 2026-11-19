@@ -1,6 +1,9 @@
 // Vale-alimentação: dinheiro separado, que NÃO entra no Disponível.
-// Renova todo mês no dia `renewDay` com `renewAmount`. O app só mostra quanto
-// resta até a próxima renovação (se vocês lançarem as compras com o vale).
+// Renova todo mês no dia `renewDay` com `renewAmount`.
+// - Depois que o saldo é acertado (Editar → Saldo atual, guarda `balanceDate`),
+//   o que sobra ACUMULA: saldo de partida + renovações depois do acerto +
+//   entradas (estorno) − compras.
+// - Sem acerto (contas antigas), conta só o período atual, como antes.
 import '../core/holidays.dart';
 import '../data/database.dart';
 
@@ -11,14 +14,17 @@ class ValeStatus {
     required this.amount,
     required this.spent,
     this.credits = 0,
+    required this.balance,
   });
   final DateTime periodStart; // última renovação
   final DateTime nextRenewal;
   final int amount; // valor da renovação
   final int spent; // gasto desde a última renovação
   final int credits; // entradas no vale no período (estorno, crédito extra)
+  final int balance; // saldo acumulado agora
 
-  int get left => amount + credits - spent;
+  /// Quanto tem no vale agora (acumula de um mês para o outro).
+  int get left => balance;
   int daysUntilRenewal(DateTime today) => DateTime(
     nextRenewal.year,
     nextRenewal.month,
@@ -40,19 +46,44 @@ ValeStatus valeStatus(Account vale, Iterable<Entry> entries, DateTime today) {
   var start = valeRenewalIn(vale, t.year, m);
   if (t.isBefore(start)) start = valeRenewalIn(vale, t.year, --m);
   final next = valeRenewalIn(vale, t.year, m + 1);
-  final from = _iso(start), until = _iso(next);
-  var spent = 0, credits = 0;
+  final from = _iso(start), until = _iso(next), now = _iso(t);
+  var spent = 0, credits = 0, moves = 0;
   for (final e in entries) {
-    if (e.deletedAt != null || e.accountId != vale.id) continue;
+    if (e.deletedAt != null || e.accountId != vale.id || e.date.compareTo(now) > 0) continue;
+    final d = switch (e.type) {
+      EntryType.despesa => -e.amount,
+      EntryType.receita => e.amount,
+      EntryType.transferencia => 0,
+    };
+    moves += d;
     if (e.date.compareTo(from) < 0 || e.date.compareTo(until) >= 0) continue;
     if (e.type == EntryType.despesa) spent += e.amount;
     if (e.type == EntryType.receita) credits += e.amount;
   }
+  final amount = vale.renewAmount ?? 0;
   return ValeStatus(
     periodStart: start,
     nextRenewal: next,
-    amount: vale.renewAmount ?? 0,
+    amount: amount,
     spent: spent,
     credits: credits,
+    balance: vale.balanceDate == null
+        ? amount +
+              credits -
+              spent // ainda sem acerto: zera a cada renovação
+        : vale.initialBalance + renewalsAfter(vale, DateTime.parse(vale.balanceDate!), t) * amount + moves,
   );
+}
+
+/// Quantas renovações caíram depois de [from] (exclusive) até [today] (inclusive).
+int renewalsAfter(Account vale, DateTime from, DateTime today) {
+  final start = DateTime(from.year, from.month, from.day);
+  var n = 0;
+  for (var i = 0; ; i++) {
+    final month = DateTime(start.year, start.month + i);
+    if (month.isAfter(DateTime(today.year, today.month))) break;
+    final r = valeRenewalIn(vale, month.year, month.month);
+    if (r.isAfter(start) && !r.isAfter(today)) n++;
+  }
+  return n;
 }
