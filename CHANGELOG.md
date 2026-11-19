@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.15.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.14.0...v0.15.0) (2026-11-19)
+
+
+### ✨ Novas Funcionalidades
+
+* **vale:** saldo acumula de um mês para o outro ([#37](https://github.com/oadrianrabelo/livro-caixa/issues/37)) ([441d043](https://github.com/oadrianrabelo/livro-caixa/commit/441d0439cb569618a73dd402b0fec88425be8361))
+
 ## [0.14.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.13.0...v0.14.0) (2026-11-19)
 
 
