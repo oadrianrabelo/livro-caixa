@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.13.0...v0.14.0) (2026-11-19)
+
+
+### ✨ Novas Funcionalidades
+
+* vale no dia útil, entrada no vale e lista de compras por ida ([#35](https://github.com/oadrianrabelo/livro-caixa/issues/35)) ([8b7900f](https://github.com/oadrianrabelo/livro-caixa/commit/8b7900f2cc28de3ae68b26ae85ca91d8151436a1))
+
 ## [0.13.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.12.0...v0.13.0) (2026-11-18)
 
 
