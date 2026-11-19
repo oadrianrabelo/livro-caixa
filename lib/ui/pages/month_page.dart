@@ -156,13 +156,22 @@ List<Widget> _valeBlock(BuildContext context, MonthSummary s) {
             ),
             text:
                 '${v.name}: restam ${formatBRL(st.left)}\n'
-                'renova dia ${v.renewDay} (${days == 0
+                'renova dia ${st.nextRenewal.day} (${days == 0
                     ? 'hoje'
                     : days == 1
                     ? 'amanhã'
                     : 'em $days dias'})',
           );
         },
+      ),
+    for (final e in s.valeIn)
+      LedgerRow(
+        label: data.labelOf(e),
+        value: e.amount,
+        sign: '+',
+        color: p.greenInk,
+        note: 'entrou no vale',
+        onTap: () => showEntryForm(context, editing: e),
       ),
     for (final e in s.vale)
       LedgerRow(

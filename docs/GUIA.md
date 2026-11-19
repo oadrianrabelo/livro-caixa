@@ -46,6 +46,10 @@ Não é o dia em que você digitou, nem o dia em que a conta foi "criada".
 - **Carteira → Nova conta → Vale-alimentação**, valor e dia 20.
 - Compras com ele (cesta, arroz): conta = o vale. Não saem do Disponível; o post-it mostra quanto resta.
 
+
+Quando o dia da renovação cai em **fim de semana ou feriado nacional** (inclusive Carnaval, Sexta-feira Santa e Corpus Christi), o app considera que o vale entra no **dia útil anterior**, como a empresa faz. Ex.: 20/11/2026 é feriado, então renova no dia 19. Feriados só da cidade ou do estado não entram.
+
+**Entrada no vale** (estorno, crédito extra): Lançar → Entrada → conta do vale. Soma no que resta do vale, fica fora do Disponível e não gera dízimo.
 ## Calculadora de compras
 
 No mercado, toque em **Calcular compras**, no post-it do vale (ou procure "calculadora" na busca). Digite o preço e toque Enter: o campo já fica pronto para o próximo. Dá para pôr a quantidade (− 1 +) e o nome. O total aparece grande e mostra quanto sobra no vale (ou quanto passa). A lista fica guardada no celular, então fechar o app no meio não perde nada. No fim, **Lançar no vale** abre o lançamento já preenchido e marcado como pago; ao salvar, os itens vão para o histórico e a calculadora é limpa.
@@ -56,7 +60,7 @@ No mercado, toque em **Calcular compras**, no post-it do vale (ou procure "calcu
 
 O histórico do mercado sincroniza entre os celulares, então o relatório é da casa toda.
 
-- **Lista da casa**: os itens de "para pegar" são compartilhados. Um põe em casa (chip **+ Item** na calculadora, ou **Salvar na lista da casa** no relatório) e o outro vê no mercado. Ao lançar a compra, o que foi comprado sai da lista.
+- **Lista desta ida**: na calculadora, **+ Item** põe o que precisa comprar (aparece nos dois celulares). Cada item tem o lápis (corrigir) e o × (tirar); tocar no nome já preenche o último preço. Embaixo aparecem sugestões do que vocês costumam comprar: só entram na lista se tocar. Ao lançar a compra, a lista recomeça vazia.
 - **Errou um preço?** Toque no item anotado: ele volta para os campos; corrija e toque **Salvar correção**.
 
 ## Depositar o dinheiro em mãos (ou passar de uma conta para outra)
