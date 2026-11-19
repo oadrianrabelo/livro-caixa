@@ -265,6 +265,8 @@ class _EntryFormState extends State<EntryForm> {
     }
     if (error != null) return setState(() => _error = error);
 
+    // Dinheiro que entra no vale não é renda: não gera dízimo.
+    if (_type == EntryType.receita && scope.data.valeAccountIds.contains(from)) _tithable = false;
     final transfer = _type == EntryType.transferencia;
     final description = _description.text.trim();
     final db = scope.db;
@@ -321,7 +323,8 @@ class _EntryFormState extends State<EntryForm> {
   /// Contas que fazem sentido para o tipo (vale-alimentação só para gastos).
   List<Account> _accountsFor(AppData data) => data.accounts
       .where((a) => !a.archived || a.id == _accountId)
-      .where((a) => _type == EntryType.despesa || a.type != AccountType.vale)
+      // Vale: gastos e entradas (estorno, crédito extra); transferência, não.
+      .where((a) => _type != EntryType.transferencia || a.type != AccountType.vale)
       .toList();
 
   @override
@@ -469,7 +472,13 @@ class _EntryFormState extends State<EntryForm> {
               },
             ),
           if (!transfer && _type == EntryType.despesa) ?_budgetNote(data, note),
-          if (onVale) note('Pago com o vale-alimentação: não sai do Disponível.', icon: LucideIcons.utensils),
+          if (onVale)
+            note(
+              _type == EntryType.receita
+                  ? 'Entra no vale (estorno, crédito extra): soma no que resta dele, fora do Disponível e sem dízimo.'
+                  : 'Pago com o vale-alimentação: não sai do Disponível.',
+              icon: LucideIcons.utensils,
+            ),
           if (_type == EntryType.despesa && data.account(from)?.type == AccountType.cartao)
             note(
               'Entra na fatura que vence em ${monthLabel(invoiceDueMonth(data.account(from)!, _date)).toLowerCase()}.',
@@ -512,7 +521,7 @@ class _EntryFormState extends State<EntryForm> {
                   value: _paid,
                   onChanged: (v) => setState(() => _paid = v),
                 ),
-                if (_type == EntryType.receita)
+                if (_type == EntryType.receita && !onVale)
                   LcToggleRow(
                     title: 'Gera dízimo e oferta',
                     subtitle: editing?.titheStatus == TitheStatus.separado

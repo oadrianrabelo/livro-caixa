@@ -62,6 +62,9 @@ class MonthSummary {
   /// Gastos pagos com o vale-alimentação: aparecem, mas não saem do Disponível.
   final List<Entry> vale = [];
 
+  /// Entradas no vale (estorno, crédito extra): também fora do Disponível.
+  final List<Entry> valeIn = [];
+
   /// Faturas de cartão que vencem neste mês (entram em Cartão).
   final List<Invoice> invoices = [];
 
@@ -111,6 +114,7 @@ MonthSummary monthSummary(
     if (e.deletedAt != null || !e.date.startsWith(month)) continue;
     if (valeAccounts.contains(e.accountId)) {
       if (e.type == EntryType.despesa) s.vale.add(e);
+      if (e.type == EntryType.receita) s.valeIn.add(e);
       continue;
     }
     switch (e.type) {

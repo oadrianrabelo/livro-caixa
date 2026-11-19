@@ -30,8 +30,7 @@ Future<void> showShoppingCalc(BuildContext context) async {
     date: entry?.date ?? today(),
     items: [for (final i in cart) (name: i.name, price: i.price, qty: i.qty)],
   );
-  final bought = {for (final i in cart) normalizeItem(i.name)};
-  await scope.db.removeFromPlan(bought.where((k) => k.isNotEmpty)); // comprado: sai da lista da casa
+  await scope.db.clearPlan(); // a lista era desta ida: a próxima começa do zero
   await scope.prefs.setShopping(const []);
 }
 
@@ -105,13 +104,13 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
     _priceFocus.requestFocus();
   }
 
-  /// Põe um item na lista da casa (aparece nos dois celulares).
-  Future<void> _addToPlan() async {
-    final controller = TextEditingController();
+  /// Pede o nome de um item da lista (novo, ou corrigindo um que já está).
+  Future<String?> _askItemName({String? initial}) async {
+    final controller = TextEditingController(text: initial ?? '');
     final name = await showLcDialog<String>(
       context,
       builder: (c) => LcDialogBody(
-        title: 'Pôr na lista de compras',
+        title: initial == null ? 'Pôr na lista' : 'Corrigir item',
         content: LcField(
           controller: controller,
           autofocus: true,
@@ -120,12 +119,24 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
         ),
         actions: [
           LcButton('Cancelar', kind: LcButtonKind.ghost, onPressed: () => Navigator.pop(c)),
-          LcButton('Adicionar', onPressed: () => Navigator.pop(c, controller.text.trim())),
+          LcButton(initial == null ? 'Pôr' : 'Salvar', onPressed: () => Navigator.pop(c, controller.text.trim())),
         ],
       ),
     );
-    if (name == null || name.isEmpty || !mounted) return;
+    return name == null || name.isEmpty ? null : name;
+  }
+
+  /// Põe um item na lista desta ida (aparece nos dois celulares).
+  Future<void> _addToPlan() async {
+    final name = await _askItemName();
+    if (name == null || !mounted) return;
     await AppScope.of(context).db.addToPlan({normalizeItem(name): name});
+  }
+
+  Future<void> _editPlanItem(String name) async {
+    final fixed = await _askItemName(initial: name);
+    if (fixed == null || fixed == name || !mounted) return;
+    await AppScope.of(context).db.renamePlanItem(normalizeItem(name), normalizeItem(fixed), fixed);
   }
 
   Future<void> _remove(Prefs prefs, int index) async {
@@ -163,6 +174,11 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
         final suggestions = query.length < 2
             ? const <ProductStats>[]
             : stats.where((s) => s.key.contains(query) && s.key != query).take(4).toList();
+        final planKeys = {for (final n in plan) normalizeItem(n)};
+        final ideas = [
+          for (final st in suggestedList(stats, DateTime.now()))
+            if (st.dueOn(DateTime.now()) && !planKeys.contains(st.key) && !inCart.contains(st.key)) st,
+        ].take(6).toList();
         Widget chip(String label, VoidCallback onTap, {bool done = false}) => LcChip(
           label,
           selected: false,
@@ -224,28 +240,108 @@ class _ShoppingCalcState extends State<_ShoppingCalc> {
                   ],
                 ),
               ),
-              ...[
-                const SizedBox(height: 12),
-                const LcLabel('Lista da casa (para pegar)'),
+              // Lista desta ida ao mercado: cada item com corrigir e tirar.
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  const Expanded(child: LcLabel('Lista desta ida')),
+                  LcButton(
+                    'Item',
+                    icon: LucideIcons.plus,
+                    small: true,
+                    kind: LcButtonKind.ghost,
+                    onPressed: _addToPlan,
+                  ),
+                ],
+              ),
+              if (plan.isEmpty)
+                Text(
+                  'Vazia. Ponha o que precisa comprar (aparece nos dois celulares).',
+                  style: TextStyle(fontSize: 12.5, color: p.pencil),
+                ),
+              for (final n in plan)
+                Builder(
+                  builder: (context) {
+                    final key = normalizeItem(n);
+                    final got = inCart.contains(key);
+                    final st = byKey[key];
+                    return Container(
+                      decoration: BoxDecoration(
+                        border: Border(bottom: BorderSide(color: hairline(p))),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              // Toque: já preenche nome e último preço para anotar.
+                              onTap: () => st != null ? _fill(st) : setState(() => _name.text = n),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 9),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      got ? LucideIcons.circleCheck : LucideIcons.circle,
+                                      size: 16,
+                                      color: got ? p.greenInk : p.pencil,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Expanded(
+                                      child: Text(
+                                        n,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: got ? p.pencil : p.ink,
+                                          decoration: got ? TextDecoration.lineThrough : null,
+                                        ),
+                                      ),
+                                    ),
+                                    if (st != null)
+                                      Text(
+                                        '~${formatBRL(st.lastPrice)}',
+                                        style: TextStyle(fontSize: 12, color: p.pencil),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                          LcIconButton(
+                            LucideIcons.pencil,
+                            size: 14,
+                            tooltip: 'Corrigir',
+                            color: p.pencil,
+                            onPressed: () => _editPlanItem(n),
+                          ),
+                          LcIconButton(
+                            LucideIcons.x,
+                            size: 15,
+                            tooltip: 'Tirar da lista',
+                            color: p.pencil,
+                            onPressed: () => scope.db.removeFromPlan([key]),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              // Sugestões do histórico: só aparecem; entram na lista se tocar.
+              if (ideas.isNotEmpty) ...[
+                const SizedBox(height: 10),
+                Text('Costumam comprar (toque para pôr na lista)', style: TextStyle(fontSize: 12, color: p.pencil)),
+                const SizedBox(height: 6),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    for (final n in plan)
-                      chip(
-                        byKey[normalizeItem(n)] == null ? n : '$n · ${formatBRL(byKey[normalizeItem(n)]!.lastPrice)}',
-                        () {
-                          final s = byKey[normalizeItem(n)];
-                          s != null ? _fill(s) : setState(() => _name.text = n);
-                        },
-                        done: inCart.contains(normalizeItem(n)),
+                    for (final st in ideas)
+                      LcChip(
+                        st.name,
+                        selected: false,
+                        onTap: () => scope.db.addToPlan({st.key: st.name}),
+                        leading: Icon(LucideIcons.plus, size: 13, color: p.pencil),
                       ),
-                    LcChip(
-                      'Item',
-                      selected: false,
-                      onTap: _addToPlan,
-                      leading: Icon(LucideIcons.plus, size: 13, color: p.pencil),
-                    ),
                   ],
                 ),
               ],

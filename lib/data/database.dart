@@ -768,6 +768,22 @@ class AppDatabase extends _$AppDatabase {
     }
   });
 
+  /// Troca o nome de um item da lista.
+  Future<void> renamePlanItem(String oldKey, String newKey, String newName) => transaction(() async {
+    if (oldKey != newKey) await softDelete(planItems, 'plan-$oldKey');
+    await addToPlan({newKey: newName});
+  });
+
+  /// A lista é de uma ida ao mercado: ao lançar a compra, ela recomeça vazia.
+  Future<void> clearPlan() async {
+    final t = now();
+    await customUpdate(
+      'UPDATE plan_items SET deleted_at = ?, updated_at = ? WHERE deleted_at IS NULL',
+      variables: [Variable.withInt(t), Variable.withInt(t)],
+      updates: {planItems},
+    );
+  }
+
   /// Tira itens da lista (comprados, ou desmarcados).
   Future<void> removeFromPlan(Iterable<String> keys) => transaction(() async {
     for (final k in keys) {

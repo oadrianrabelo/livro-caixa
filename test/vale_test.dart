@@ -82,4 +82,23 @@ void main() {
     expect(isBusinessDay(DateTime(2026, 11, 19)), isTrue);
     expect(businessDayOnOrBefore(DateTime(2026, 9, 7)), DateTime(2026, 9, 4)); // segunda feriado -> sexta
   });
+
+  test('entrada no vale (estorno) soma no que resta e fica fora do Disponível', () {
+    final refund = Entry(
+      id: 'r',
+      createdAt: 0,
+      updatedAt: 0,
+      type: EntryType.receita,
+      amount: 2500,
+      date: '2026-11-25',
+      description: 'Estorno',
+      accountId: 'va',
+      paid: true,
+    );
+    final st = valeStatus(vale, [buy('2026-11-21', 10000), refund], DateTime(2026, 11, 26));
+    expect(st.left, 60000 - 10000 + 2500);
+    final s = monthSummary([refund], const [], '2026-11', valeAccounts: {'va'});
+    expect(s.income, 0);
+    expect(s.valeIn.single.id, 'r');
+  });
 }

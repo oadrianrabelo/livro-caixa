@@ -164,6 +164,15 @@ List<Widget> _valeBlock(BuildContext context, MonthSummary s) {
           );
         },
       ),
+    for (final e in s.valeIn)
+      LedgerRow(
+        label: data.labelOf(e),
+        value: e.amount,
+        sign: '+',
+        color: p.greenInk,
+        note: 'entrou no vale',
+        onTap: () => showEntryForm(context, editing: e),
+      ),
     for (final e in s.vale)
       LedgerRow(
         label: data.labelOf(e),
