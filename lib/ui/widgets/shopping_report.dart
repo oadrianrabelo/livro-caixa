@@ -72,7 +72,7 @@ class _ShoppingReportState extends State<_ShoppingReport> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Montado com o que vocês anotam na calculadora de compras.',
+            'Montado com o que vocês anotam no carrinho da aba Mercado.',
             style: TextStyle(fontSize: 12.5, color: p.pencil),
           ),
           const SizedBox(height: 14),

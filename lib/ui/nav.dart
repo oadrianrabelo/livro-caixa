@@ -12,6 +12,9 @@ class MonthNav extends ChangeNotifier {
   /// Abre a paleta de comandos (registrado pelo chassi do app).
   VoidCallback? openPalette;
 
+  /// Troca de aba (registrado pelo chassi do app). 1 = Mercado.
+  void Function(int index)? goTab;
+
   void Function(int delta)? _go;
   VoidCallback? _today;
 

@@ -52,9 +52,14 @@ Quando o dia da renovação cai em **fim de semana ou feriado nacional** (inclus
 **Entrada no vale** (estorno, crédito extra): Lançar → Entrada → conta do vale. Soma no que resta do vale, fica fora do Disponível e não gera dízimo.
 
 **O vale acumula**: o que sobra não some na renovação. Carteira → toque no vale → **Saldo atual do vale**: ponha o que o app do vale mostra hoje e salve. Dali em diante, a cada renovação o app soma o valor do mês e desconta as compras lançadas no vale. (Enquanto não acertar o saldo, o vale aparece como antes, zerando a cada renovação.)
-## Calculadora de compras
+## Aba Mercado (lista, carrinho e vale)
 
-No mercado, toque em **Calcular compras**, no post-it do vale (ou procure "calculadora" na busca). Digite o preço e toque Enter: o campo já fica pronto para o próximo. Dá para pôr a quantidade (− 1 +) e o nome. O total aparece grande e mostra quanto sobra no vale (ou quanto passa). A lista fica guardada no celular, então fechar o app no meio não perde nada. No fim, **Lançar no vale** abre o lançamento já preenchido e marcado como pago; ao salvar, os itens vão para o histórico e a calculadora é limpa.
+Tudo do mercado fica na aba **Mercado** (segunda aba). No topo, o **vale**: quanto tem, quando renova e o **+** para lançar algo nele.
+
+- **Em casa, a lista**: digite no campo "Pôr na lista…" e dê Enter; já fica pronto para o próximo. Os chips embaixo são sugestões do que vocês costumam comprar (enquanto digita, mostram o que combina): só entram se tocar. Cada item tem o lápis (corrigir) e o × (tirar). A lista aparece nos dois celulares.
+- **No mercado, o carrinho**: toque no item da lista → o preço da última vez já vem preenchido → corrija se precisar → Enter. O item fica riscado e vai para o carrinho. O que não estava na lista, anote direto no campo do carrinho (preço e, se quiser, o nome).
+- **A barra escura embaixo** mostra o total e quanto fica no vale. **Lançar no vale** abre o lançamento já preenchido e pago; ao salvar, os itens vão para o histórico e lista e carrinho recomeçam vazios.
+- Errou um preço? Toque no item do carrinho para corrigir.
 
 **Vale a pena pôr o nome dos itens.** Com o nome, o app aprende:
 - ao digitar "le", sugere **Leite · R$ 5,99** (último preço); um toque preenche nome e preço;

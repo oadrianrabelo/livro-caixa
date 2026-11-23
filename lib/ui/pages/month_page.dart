@@ -11,7 +11,6 @@ import '../kit/kit.dart';
 import '../nav.dart';
 import '../theme/paper.dart';
 import '../widgets/entry_form.dart';
-import '../widgets/shopping_calc.dart';
 import '../widgets/wallet_sheets.dart';
 import '../widgets/ledger.dart';
 import '../widgets/tithe_dialog.dart';
@@ -120,67 +119,26 @@ class _MonthPageState extends State<MonthPage> {
 }
 
 /// Vale-alimentação: quanto resta até renovar. Fica fora do Disponível e do Sobrou.
+/// Vale: uma linha só (saldo e renovação). O resto fica na aba Mercado.
 List<Widget> _valeBlock(BuildContext context, MonthSummary s) {
-  final scope = AppScope.of(context);
+  final data = AppScope.of(context).data;
   final p = Paper.of(context);
-  final data = scope.data;
   final vales = data.accounts.where((a) => a.type == AccountType.vale && !a.archived).toList();
   if (vales.isEmpty) return const [];
   final now = DateTime.now();
   return [
-    LedgerHeading(
-      'Vale',
-      trailing: Text('fora do disponível', style: p.hand(17, color: p.pencil)),
-    ),
     for (final v in vales)
       Builder(
         builder: (context) {
           final st = valeStatus(v, data.entries, now);
-          final days = st.daysUntilRenewal(now);
-          return StickyNote(
-            action: GestureDetector(
-              onTap: () => showShoppingCalc(context),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Padding(
-                  padding: const EdgeInsets.all(6),
-                  child: Text(
-                    'Calcular\ncompras',
-                    textAlign: TextAlign.end,
-                    style: p
-                        .hand(19, color: p.redInk, weight: FontWeight.w700)
-                        .copyWith(decoration: TextDecoration.underline, decorationColor: p.redInk, height: 1.1),
-                  ),
-                ),
-              ),
-            ),
-            text:
-                '${v.name}: tem ${formatBRL(st.left)}\n'
-                'renova dia ${st.nextRenewal.day} (${days == 0
-                    ? 'hoje'
-                    : days == 1
-                    ? 'amanhã'
-                    : 'em $days dias'})',
+          return LedgerRow(
+            label: v.name,
+            note: 'renova dia ${st.nextRenewal.day} →',
+            value: st.left,
+            color: p.pencil,
+            onTap: () => monthNav.goTab?.call(1),
           );
         },
-      ),
-    for (final e in s.valeIn)
-      LedgerRow(
-        label: data.labelOf(e),
-        value: e.amount,
-        sign: '+',
-        color: p.greenInk,
-        note: 'entrou no vale',
-        onTap: () => showEntryForm(context, editing: e),
-      ),
-    for (final e in s.vale)
-      LedgerRow(
-        label: data.labelOf(e),
-        value: e.amount,
-        color: p.pencil,
-        checked: e.paid,
-        onCheck: () => scope.db.setPaid(e.id, !e.paid),
-        onTap: () => showEntryForm(context, editing: e),
       ),
   ];
 }
