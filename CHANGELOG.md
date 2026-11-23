@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.15.0...v0.16.0) (2026-11-23)
+
+
+### ✨ Novas Funcionalidades
+
+* aba Mercado com vale, lista e carrinho numa página só ([#39](https://github.com/oadrianrabelo/livro-caixa/issues/39)) ([e407930](https://github.com/oadrianrabelo/livro-caixa/commit/e407930995aefb9c4482393d587530da080763cd))
+
 ## [0.15.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.14.0...v0.15.0) (2026-11-19)
 
 
