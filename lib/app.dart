@@ -9,6 +9,7 @@ import 'ui/lock.dart';
 import 'ui/nav.dart';
 import 'ui/pages/accounts_page.dart';
 import 'ui/pages/entries_page.dart';
+import 'ui/pages/market_page.dart';
 import 'ui/pages/month_page.dart';
 import 'ui/pages/settings_page.dart';
 import 'ui/pages/year_page.dart';
@@ -76,6 +77,7 @@ class _Dest {
 
 const _destinations = [
   _Dest('Mês', LucideIcons.bookOpen, LucideIcons.bookOpen, MonthPage()),
+  _Dest('Mercado', LucideIcons.shoppingCart, LucideIcons.shoppingCart, MarketPage()),
   _Dest('Lançamentos', LucideIcons.list, LucideIcons.list, EntriesPage()),
   _Dest('Ano', LucideIcons.chartColumn, LucideIcons.chartColumn, YearPage()),
   _Dest('Carteira', LucideIcons.wallet, LucideIcons.wallet, AccountsPage()),
@@ -102,6 +104,7 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   void initState() {
     super.initState();
     monthNav.openPalette = _palette;
+    monthNav.goTab = _goTab;
   }
 
   @override
@@ -139,7 +142,7 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   Widget build(BuildContext context) {
     final wide = MediaQuery.sizeOf(context).width >= 840;
     final p = Paper.of(context);
-    final showLaunch = _index <= 1;
+    final showLaunch = _index == 0 || _index == 2; // Mercado tem a própria barra
     final pages = Stack(
       children: [
         Column(
@@ -415,12 +418,17 @@ class _TabBar extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 3),
-                        Text(
-                          _destinations[i].label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: i == index ? FontWeight.w600 : FontWeight.w500,
-                            color: i == index ? p.ink : p.pencil.withValues(alpha: 0.8),
+                        // Seis abas no celular: o rótulo encolhe em vez de quebrar a linha.
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            _destinations[i].label,
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: i == index ? FontWeight.w600 : FontWeight.w500,
+                              color: i == index ? p.ink : p.pencil.withValues(alpha: 0.8),
+                            ),
                           ),
                         ),
                       ],

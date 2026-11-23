@@ -12,7 +12,6 @@ import '../../domain/tithe.dart';
 import '../nav.dart';
 import '../theme/paper.dart';
 import 'entry_form.dart';
-import 'shopping_calc.dart';
 import 'kbd.dart';
 import 'tithe_dialog.dart';
 
@@ -73,7 +72,12 @@ class _PaletteState extends State<_Palette> {
           (c) => showTitheDialog(c, incomes: pending),
           subtitle: '${pending.length} entrada(s) pendente(s)',
         ),
-      _Command(LucideIcons.calculator, 'Calculadora de compras', (c) => showShoppingCalc(c)),
+      _Command(
+        LucideIcons.shoppingCart,
+        'Mercado: lista, calculadora e vale',
+        (c) async => widget.goTab(1),
+        keys: ['2'],
+      ),
       _Command(LucideIcons.calendarCheck, 'Ir para o mês atual', (c) async {
         widget.goTab(0);
         monthNav.goToday();
@@ -86,10 +90,10 @@ class _PaletteState extends State<_Palette> {
         widget.goTab(0);
         monthNav.go(1);
       }, keys: ['→']),
-      _Command(LucideIcons.receiptText, 'Abrir lançamentos', (c) async => widget.goTab(1), keys: ['2']),
-      _Command(LucideIcons.chartColumn, 'Abrir o ano', (c) async => widget.goTab(2), keys: ['3']),
-      _Command(LucideIcons.wallet, 'Abrir a carteira', (c) async => widget.goTab(3), keys: ['4']),
-      _Command(LucideIcons.slidersHorizontal, 'Abrir ajustes', (c) async => widget.goTab(4), keys: ['5']),
+      _Command(LucideIcons.receiptText, 'Abrir lançamentos', (c) async => widget.goTab(2), keys: ['3']),
+      _Command(LucideIcons.chartColumn, 'Abrir o ano', (c) async => widget.goTab(3), keys: ['4']),
+      _Command(LucideIcons.wallet, 'Abrir a carteira', (c) async => widget.goTab(4), keys: ['5']),
+      _Command(LucideIcons.slidersHorizontal, 'Abrir ajustes', (c) async => widget.goTab(5), keys: ['6']),
     ].where((a) => q.isEmpty || a.title.toLowerCase().contains(q)).toList();
 
     // Lançamentos que batem com a busca (os 30 mais recentes).

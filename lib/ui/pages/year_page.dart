@@ -556,10 +556,7 @@ class _Market extends StatelessWidget {
       ),
       children: [
         if (stats.isEmpty)
-          const LcRow(
-            title: 'Sem compras anotadas',
-            subtitle: 'Use a calculadora de compras (post-it do vale) e lance a compra no fim.',
-          )
+          const LcRow(title: 'Sem compras anotadas', subtitle: 'Use a aba Mercado no mercado e lance a compra no fim.')
         else ...[
           LcRow(
             title: '${trips.trips} ${trips.trips == 1 ? 'ida' : 'idas'} neste mês',
