@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.1](https://github.com/oadrianrabelo/livro-caixa/compare/v0.16.0...v0.16.1) (2026-11-24)
+
+
+### 🐛 Correções
+
+* calculadora de volta no topo do Mercado e atalhos não roubam o que se digita ([#41](https://github.com/oadrianrabelo/livro-caixa/issues/41)) ([d18cc85](https://github.com/oadrianrabelo/livro-caixa/commit/d18cc856e7d0b1bedd5c1cf0c3eb15b187cab56d))
+
 ## [0.16.0](https://github.com/oadrianrabelo/livro-caixa/compare/v0.15.0...v0.16.0) (2026-11-23)
 
 
