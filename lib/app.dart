@@ -196,10 +196,42 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
             ],
           );
 
-    return CallbackShortcuts(
-      bindings: _shortcuts,
-      child: Focus(autofocus: true, child: Scaffold(resizeToAvoidBottomInset: false, body: body)),
+    // Atalhos do chassi. Os de uma tecla só (N, E, T, ←, →, 1-6) ficam
+    // desligados enquanto se digita num campo: senão "1" trocava de aba no
+    // meio do preço. Desligado, a tecla segue para o campo.
+    return Shortcuts(
+      shortcuts: {
+        for (final MapEntry(:key, :value) in _shortcuts.entries)
+          key: _ShellIntent(value, plain: key is SingleActivator && !key.control && !key.meta),
+      },
+      child: Actions(
+        actions: {_ShellIntent: _ShellAction()},
+        child: Focus(autofocus: true, child: Scaffold(resizeToAvoidBottomInset: false, body: body)),
+      ),
     );
+  }
+}
+
+class _ShellIntent extends Intent {
+  const _ShellIntent(this.run, {required this.plain});
+  final VoidCallback run;
+  final bool plain; // tecla sem Ctrl/⌘
+}
+
+class _ShellAction extends Action<_ShellIntent> {
+  /// Alguém está digitando num campo de texto?
+  static bool get _typing {
+    final ctx = FocusManager.instance.primaryFocus?.context;
+    return ctx != null && (ctx.widget is EditableText || ctx.findAncestorWidgetOfExactType<EditableText>() != null);
+  }
+
+  @override
+  bool isEnabled(_ShellIntent intent) => !intent.plain || !_typing;
+
+  @override
+  Object? invoke(_ShellIntent intent) {
+    intent.run();
+    return null;
   }
 }
 

@@ -52,14 +52,15 @@ Quando o dia da renovação cai em **fim de semana ou feriado nacional** (inclus
 **Entrada no vale** (estorno, crédito extra): Lançar → Entrada → conta do vale. Soma no que resta do vale, fica fora do Disponível e não gera dízimo.
 
 **O vale acumula**: o que sobra não some na renovação. Carteira → toque no vale → **Saldo atual do vale**: ponha o que o app do vale mostra hoje e salve. Dali em diante, a cada renovação o app soma o valor do mês e desconta as compras lançadas no vale. (Enquanto não acertar o saldo, o vale aparece como antes, zerando a cada renovação.)
-## Aba Mercado (lista, carrinho e vale)
+## Aba Mercado (calculadora, carrinho, lista e vale)
 
-Tudo do mercado fica na aba **Mercado** (segunda aba). No topo, o **vale**: quanto tem, quando renova e o **+** para lançar algo nele.
+Tudo do mercado fica na aba **Mercado** (segunda aba), nesta ordem:
 
-- **Em casa, a lista**: digite no campo "Pôr na lista…" e dê Enter; já fica pronto para o próximo. Os chips embaixo são sugestões do que vocês costumam comprar (enquanto digita, mostram o que combina): só entram se tocar. Cada item tem o lápis (corrigir) e o × (tirar). A lista aparece nos dois celulares.
-- **No mercado, o carrinho**: toque no item da lista → o preço da última vez já vem preenchido → corrija se precisar → Enter. O item fica riscado e vai para o carrinho. O que não estava na lista, anote direto no campo do carrinho (preço e, se quiser, o nome).
-- **A barra escura embaixo** mostra o total e quanto fica no vale. **Lançar no vale** abre o lançamento já preenchido e pago; ao salvar, os itens vão para o histórico e lista e carrinho recomeçam vazios.
-- Errou um preço? Toque no item do carrinho para corrigir.
+- **Calculadora** (no topo): o visor mostra o total do carrinho e quanto tem/fica no vale. Digite o **preço** e dê **Enter**: anota e já volta para o próximo preço. Quantidade (− 1 +) e nome são opcionais; ao digitar o nome, aparece o último preço daquele item para tocar.
+- **Carrinho**: o que já foi anotado. Toque num item para corrigir; × tira.
+- **Lista** (em casa): digite e dê Enter para pôr o que falta (aparece nos dois celulares). No mercado, toque no item da lista: o preço da última vez já vem, Enter, e ele fica riscado. Sugestões do que vocês costumam comprar aparecem em chips e só entram se tocar.
+- **A barra escura embaixo**: total, quanto fica no vale e **Lançar no vale** (lança, guarda no histórico e recomeça lista e carrinho).
+- No topo do visor, o **+** lança algo direto no vale (estorno, crédito).
 
 **Vale a pena pôr o nome dos itens.** Com o nome, o app aprende:
 - ao digitar "le", sugere **Leite · R$ 5,99** (último preço); um toque preenche nome e preço;
