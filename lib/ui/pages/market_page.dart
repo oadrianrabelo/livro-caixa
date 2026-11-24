@@ -48,6 +48,8 @@ class _MarketPageState extends State<MarketPage> {
   final _price = TextEditingController();
   final _priceFocus = FocusNode();
   final _name = TextEditingController();
+  final _pageFocus = FocusNode(debugLabel: 'mercado');
+  int _qty = 1;
 
   @override
   void dispose() {
@@ -56,6 +58,7 @@ class _MarketPageState extends State<MarketPage> {
     _price.dispose();
     _priceFocus.dispose();
     _name.dispose();
+    _pageFocus.dispose();
     super.dispose();
   }
 
@@ -152,15 +155,28 @@ class _MarketPageState extends State<MarketPage> {
     await prefs.setShopping([item, ...prefs.shopping]);
   }
 
-  /// Anotar algo que não estava na lista (preço + nome opcional, sem janela).
+  /// Calculadora: anota o preço (e nome, se tiver) e já volta para o próximo preço.
   Future<void> _addLoose() async {
     final cents = parseBRL(_price.text);
-    if (cents == null || cents <= 0) return;
+    if (cents == null || cents <= 0) {
+      _priceFocus.requestFocus();
+      return;
+    }
     final prefs = AppScope.of(context).prefs;
-    await prefs.setShopping([CartItem(price: cents, name: _name.text.trim()), ...prefs.shopping]);
+    await prefs.setShopping([CartItem(price: cents, qty: _qty, name: _name.text.trim()), ...prefs.shopping]);
     _price.clear();
     _name.clear();
+    setState(() => _qty = 1);
     _priceFocus.requestFocus();
+  }
+
+  /// Já comprou antes: nome e último preço nos campos (preço selecionado para trocar).
+  void _fillFrom(ProductStats st) {
+    _name.text = st.name;
+    if (parseBRL(_price.text) == null) _price.text = centsToInput(st.lastPrice);
+    setState(() {});
+    _priceFocus.requestFocus();
+    _price.selection = TextSelection(baseOffset: 0, extentOffset: _price.text.length);
   }
 
   Future<void> _editCart(Prefs prefs, int index) async {
@@ -220,8 +236,17 @@ class _MarketPageState extends State<MarketPage> {
               ]..sort((a, b) => b.date.compareTo(a.date)));
         final days = st?.daysUntilRenewal(now);
 
+        final nameQ = normalizeItem(_name.text);
+        final nameHits = nameQ.length < 2
+            ? const <ProductStats>[]
+            : [
+                for (final x in stats)
+                  if (x.key.contains(nameQ) && x.key != nameQ) x,
+              ].take(4).toList();
+        final keyboard = MediaQuery.viewInsetsOf(context).bottom > 0;
+
         final body = ListView(
-          padding: EdgeInsets.fromLTRB(20, 24, 20, cart.isEmpty ? 40 : 120),
+          padding: EdgeInsets.fromLTRB(20, 20, 20, cart.isEmpty || keyboard ? 40 : 120),
           children: [
             Row(
               children: [
@@ -235,51 +260,127 @@ class _MarketPageState extends State<MarketPage> {
                 ),
               ],
             ),
-            const SizedBox(height: 14),
-            // ---- Vale ----
-            if (vale != null && st != null)
-              Container(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
-                margin: const EdgeInsets.only(bottom: 22),
-                decoration: BoxDecoration(color: p.sticky, borderRadius: BorderRadius.circular(12)),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
+            const SizedBox(height: 12),
+            // ---- Calculadora: o visor ----
+            Container(
+              padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+              decoration: BoxDecoration(color: p.sticky, borderRadius: BorderRadius.circular(12)),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          count == 0 ? 'Carrinho vazio' : '$count ${count == 1 ? 'item' : 'itens'} no carrinho',
+                          style: TextStyle(fontSize: 12.5, color: p.pencil),
+                        ),
+                        FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(formatBRL(total), style: p.mono(34, weight: FontWeight.w700)),
+                        ),
+                        if (vale != null && st != null)
                           Text(
-                            vale.name,
-                            style: TextStyle(fontSize: 13, color: p.pencil, fontWeight: FontWeight.w600),
-                          ),
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              formatBRL(st.left),
-                              style: p.mono(28, weight: FontWeight.w700, color: st.left < 0 ? p.redInk : null),
+                            total == 0
+                                ? '${vale.name}: tem ${formatBRL(st.left)} · renova dia ${st.nextRenewal.day}'
+                                      '${days != null && days <= 1 ? (days == 0 ? ' (hoje)' : ' (amanhã)') : ''}'
+                                : total <= st.left
+                                ? 'No vale: tem ${formatBRL(st.left)} · fica ${formatBRL(st.left - total)}'
+                                : 'Passa ${formatBRL(total - st.left)} do que tem no vale (${formatBRL(st.left)})',
+                            style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w500,
+                              color: total > st.left ? p.redInk : (total == 0 ? p.pencil : p.greenInk),
                             ),
                           ),
-                          Text(
-                            'renova dia ${st.nextRenewal.day} '
-                            '(${days == 0
-                                ? 'hoje'
-                                : days == 1
-                                ? 'amanhã'
-                                : 'em $days dias'}) · '
-                            'gasto no período ${formatBRL(st.spent)}',
-                            style: TextStyle(fontSize: 12.5, color: p.pencil),
-                          ),
-                        ],
-                      ),
+                      ],
                     ),
+                  ),
+                  if (vale != null)
                     LcIconButton(
                       LucideIcons.plus,
                       tooltip: 'Lançar algo no vale',
                       onPressed: () => showEntryForm(context, accountId: vale.id, paid: true),
                     ),
-                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            // ---- Calculadora: anotar ----
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: LcField(
+                    label: 'Preço',
+                    controller: _price,
+                    focusNode: _priceFocus,
+                    money: true,
+                    prefix: r'R$ ',
+                    hint: '0,00',
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    onSubmitted: (_) => _addLoose(),
+                  ),
                 ),
+                const SizedBox(width: 10),
+                _QtyStepper(qty: _qty, onChanged: (v) => setState(() => _qty = v), p: p),
+              ],
+            ),
+            const SizedBox(height: 10),
+            LcField(
+              label: 'O que é (opcional)',
+              controller: _name,
+              hint: 'Ex.: arroz',
+              onChanged: (_) => setState(() {}),
+              onSubmitted: (_) => _addLoose(),
+            ),
+            if (nameHits.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [
+                  for (final x in nameHits)
+                    LcChip('${x.name} · ${formatBRL(x.lastPrice)}', selected: false, onTap: () => _fillFrom(x)),
+                ],
+              ),
+            ],
+            const SizedBox(height: 12),
+            LcButton('Anotar', icon: LucideIcons.plus, onPressed: _addLoose),
+            const SizedBox(height: 18),
+            // ---- Carrinho ----
+            if (cart.isNotEmpty)
+              LcGroup(
+                title: 'CARRINHO',
+                trailing: LcButton(
+                  'Esvaziar',
+                  small: true,
+                  kind: LcButtonKind.ghost,
+                  onPressed: () => _clearCart(scope.prefs),
+                ),
+                children: [
+                  for (var i = 0; i < cart.length; i++)
+                    LcRow(
+                      title: cart[i].name.isEmpty ? 'Item ${cart.length - i}' : cart[i].name,
+                      subtitle: cart[i].qty > 1 ? '${cart[i].qty} × ${formatBRL(cart[i].price)}' : null,
+                      onTap: () => _editCart(scope.prefs, i),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(formatBRL(cart[i].total), style: p.mono(14, weight: FontWeight.w600)),
+                          LcIconButton(
+                            LucideIcons.x,
+                            size: 15,
+                            tooltip: 'Tirar',
+                            color: p.pencil,
+                            onPressed: () => scope.prefs.setShopping([...cart]..removeAt(i)),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
             // ---- Lista ----
             LcGroup(
@@ -291,8 +392,17 @@ class _MarketPageState extends State<MarketPage> {
                       style: TextStyle(fontSize: 12, color: p.pencil),
                     ),
               children: [
+                for (final n in plan)
+                  _ListRow(
+                    name: n,
+                    lastPrice: byKey[normalizeItem(n)]?.lastPrice,
+                    done: inCart.contains(normalizeItem(n)),
+                    onTap: () => _pick(n, byKey[normalizeItem(n)]),
+                    onEdit: () => _renameListItem(n),
+                    onRemove: () => scope.db.removeFromPlan([normalizeItem(n)]),
+                  ),
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
+                  padding: EdgeInsets.fromLTRB(12, plan.isEmpty ? 12 : 8, 8, 8),
                   child: Row(
                     children: [
                       Expanded(
@@ -319,15 +429,15 @@ class _MarketPageState extends State<MarketPage> {
                       spacing: 6,
                       runSpacing: 6,
                       children: [
-                        for (final s in ideas)
+                        for (final x in ideas)
                           LcChip(
-                            s.name,
+                            x.name,
                             selected: false,
                             leading: Icon(LucideIcons.plus, size: 13, color: p.pencil),
                             onTap: () {
                               _listInput.clear();
                               setState(() {});
-                              scope.db.addToPlan({s.key: s.name});
+                              scope.db.addToPlan({x.key: x.name});
                             },
                           ),
                       ],
@@ -337,82 +447,8 @@ class _MarketPageState extends State<MarketPage> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
                     child: Text(
-                      'Em casa, vá pondo o que falta. No mercado, toque no item, digite o preço e Enter.',
+                      'Em casa, vá pondo o que falta. No mercado, toque no item: o preço da última vez já vem.',
                       style: TextStyle(fontSize: 12.5, color: p.pencil, height: 1.35),
-                    ),
-                  ),
-                for (final n in plan)
-                  _ListRow(
-                    name: n,
-                    lastPrice: byKey[normalizeItem(n)]?.lastPrice,
-                    done: inCart.contains(normalizeItem(n)),
-                    onTap: () => _pick(n, byKey[normalizeItem(n)]),
-                    onEdit: () => _renameListItem(n),
-                    onRemove: () => scope.db.removeFromPlan([normalizeItem(n)]),
-                  ),
-              ],
-            ),
-            // ---- Carrinho ----
-            LcGroup(
-              title: 'CARRINHO',
-              trailing: cart.isEmpty
-                  ? null
-                  : LcButton(
-                      'Esvaziar',
-                      small: true,
-                      kind: LcButtonKind.ghost,
-                      onPressed: () => _clearCart(scope.prefs),
-                    ),
-              children: [
-                // Avulso: o que não estava na lista, sem abrir janela.
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 130,
-                        child: LcField(
-                          controller: _price,
-                          focusNode: _priceFocus,
-                          prefix: r'R$ ',
-                          hint: '0,00',
-                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                          onSubmitted: (_) => _addLoose(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: LcField(controller: _name, hint: 'o quê (opcional)', onSubmitted: (_) => _addLoose()),
-                      ),
-                      LcIconButton(LucideIcons.plus, tooltip: 'Anotar', onPressed: _addLoose),
-                    ],
-                  ),
-                ),
-                if (cart.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
-                    child: Text(
-                      'Nada no carrinho. Toque num item da lista ou anote aqui em cima.',
-                      style: TextStyle(fontSize: 12.5, color: p.pencil),
-                    ),
-                  ),
-                for (var i = 0; i < cart.length; i++)
-                  LcRow(
-                    title: cart[i].name.isEmpty ? 'Item ${cart.length - i}' : cart[i].name,
-                    subtitle: cart[i].qty > 1 ? '${cart[i].qty} × ${formatBRL(cart[i].price)}' : null,
-                    onTap: () => _editCart(scope.prefs, i),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(formatBRL(cart[i].total), style: p.mono(14, weight: FontWeight.w600)),
-                        LcIconButton(
-                          LucideIcons.x,
-                          size: 15,
-                          tooltip: 'Tirar',
-                          color: p.pencil,
-                          onPressed: () => scope.prefs.setShopping([...cart]..removeAt(i)),
-                        ),
-                      ],
                     ),
                   ),
               ],
@@ -442,15 +478,26 @@ class _MarketPageState extends State<MarketPage> {
         );
 
         return Scaffold(
-          resizeToAvoidBottomInset: false,
+          // O teclado empurra a página (os campos não ficam escondidos atrás dele).
+          resizeToAvoidBottomInset: true,
           body: Stack(
             children: [
-              Align(
-                alignment: Alignment.topCenter,
-                child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: body),
+              // Tocar fora dos campos fecha o teclado (e devolve os atalhos no computador).
+              // O foco vai para a página (e não some), para os atalhos seguirem valendo.
+              Focus(
+                focusNode: _pageFocus,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onTap: () => _pageFocus.requestFocus(),
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 720), child: body),
+                  ),
+                ),
               ),
               // Barra do carrinho: total sempre à vista e o botão de lançar.
-              if (cart.isNotEmpty)
+              // Com o teclado aberto, o visor lá em cima já mostra o total.
+              if (cart.isNotEmpty && !keyboard)
                 Positioned(
                   left: 12,
                   right: 12,
