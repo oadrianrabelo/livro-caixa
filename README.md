@@ -1,6 +1,7 @@
 # 📒 Livro-Caixa — finanças da casa
 
 App de finanças pessoal, **offline** e **privado**: os dados ficam num SQLite no próprio aparelho.
+Veja a [Política de Privacidade](PRIVACIDADE.md).
 Feito em **Flutter**, um código só para **Android, Windows e Linux**, com **release e
 atualização automáticos**.
 
