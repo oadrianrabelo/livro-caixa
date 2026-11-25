@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.16.2](https://github.com/oadrianrabelo/livro-caixa/compare/v0.16.1...v0.16.2) (2026-11-25)
+
+
+### 📚 Documentação
+
+* política de privacidade (exigida pelo Google para publicar o login) ([#43](https://github.com/oadrianrabelo/livro-caixa/issues/43)) ([0b71da3](https://github.com/oadrianrabelo/livro-caixa/commit/0b71da30771bb2adc5ffe85d9a82a5151ca401cf))
+
 ## [0.16.1](https://github.com/oadrianrabelo/livro-caixa/compare/v0.16.0...v0.16.1) (2026-11-24)
 
 
